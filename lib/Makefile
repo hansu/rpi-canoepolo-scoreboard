@@ -5,7 +5,7 @@
 ##
 OBJECTS=gpio.o led-matrix.o options-initialize.o framebuffer.o \
         thread.o bdf-font.o graphics.o transformer.o led-matrix-c.o \
-	hardware-mapping.o content-streamer.o pixel-mapper.o multiplex-mappers.o
+	hardware-mapping.o content-streamer.o pixel-mapper.o multiplex-mappers.o mytimer.o
 
 TARGET=librgbmatrix
 
@@ -178,6 +178,7 @@ thread.o : thread.cc $(INCDIR)/thread.h
 framebuffer.o: framebuffer.cc framebuffer-internal.h
 multiplex-transformers.o : multiplex-transformers.cc multiplex-transformers-internal.h
 graphics.o: graphics.cc utf8-internal.h
+mytimer.o: mytimer.c $(INCDIR)/mytimer.h
 
 %.o : %.cc compiler-flags
 	$(CXX) -I$(INCDIR) $(CXXFLAGS) -c -o $@ $<

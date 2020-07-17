@@ -16,15 +16,19 @@
 #include <string.h>
 #include <curses.h>
 #include <thread>
+#include "mytimer.h"
+#include <time.h>
 
 using rgb_matrix::GPIO;
 using rgb_matrix::RGBMatrix;
 using rgb_matrix::Canvas;
 
+volatile bool bUpdateDisplay = true;
+
 class DisplayData
 {
 public:
-  DisplayData() : m_nScoreA(0), m_nScoreB(0), m_nPlayTimeSec(600)
+  DisplayData() : m_nScoreA(0), m_nScoreB(0), m_nPlayTimeSec(600), m_bTimerStarted(false)
   {
   }
 
@@ -78,16 +82,57 @@ public:
 
   void setTime(int nSec)
   {
-    m_nPlayTimeSec = nSec;
+    if(!m_bTimerStarted)
+      m_nPlayTimeSec = nSec;
   }
 
   void setTime(int nMin, int nSec)
   {
-    m_nPlayTimeSec = nMin*60 + nSec;
+    if(!m_bTimerStarted)
+      m_nPlayTimeSec = nMin*60 + nSec;
   }
 
+  void decTime()
+  {
+    m_nPlayTimeSec--;
+  }
+
+  void startTimer()
+  {
+    m_nStartTime = time(NULL);  // get current time
+    m_nSeconds = 0;
+    m_bTimerStarted = true;
+  }
+
+  void stopTimer()
+  {
+    m_bTimerStarted = false;
+  }
+
+  void updateTime()
+  {
+    if(m_bTimerStarted)
+    {
+      m_nSecondsLast = m_nSeconds;
+      m_nSeconds = (int)difftime(time(NULL), m_nStartTime);
+      if(m_nSecondsLast != m_nSeconds)
+      {
+        m_nPlayTimeSec -= (m_nSeconds - m_nSecondsLast);
+        if(m_nPlayTimeSec < 0)
+        {
+          m_nPlayTimeSec = 0;
+          m_bTimerStarted = false;
+        }
+        bUpdateDisplay = true;
+      }
+    }
+  }
 private:
   int m_nScoreA, m_nScoreB, m_nPlayTimeSec;
+  time_t m_nStartTime;
+  int m_nSeconds, m_nSecondsLast;
+  bool m_bTimerStarted;
+
 
 };
 
@@ -97,8 +142,8 @@ static void InterruptHandler(int signo) {
 }
 
 void KeyboardInput(DisplayData& dispData);
-volatile bool bUpdateDisplay = true;
 volatile bool bExit = false;
+
 
 int main(int argc, char *argv[]) {
   RGBMatrix::Options defaults;
@@ -108,11 +153,11 @@ int main(int argc, char *argv[]) {
   defaults.parallel = 1;
   defaults.show_refresh_rate = false;
   defaults.pwm_lsb_nanoseconds = 200;
-  defaults.brightness = 30;
+  defaults.brightness = 50;
   defaults.multiplexing = 6;
   defaults.inverse_colors = false;
   defaults.led_rgb_sequence = "BGR";
-  char sScore[24];
+  char sScoreA[24], sScoreB[24];
   char sTime[24];
 
   // initializing curses lib
@@ -132,7 +177,10 @@ int main(int argc, char *argv[]) {
 
 
   // ab hier
-  rgb_matrix::Color color(0, 0, 255);
+  rgb_matrix::Color timeColor(255, 0, 0);
+  rgb_matrix::Color teamAColor(255, 229, 0);
+  rgb_matrix::Color teamBColor(0, 200, 255);
+
   rgb_matrix::Color bg_color(0, 0, 0);
   rgb_matrix::Color outline_color(0,0,0);
   int letter_spacing = 0;
@@ -156,26 +204,28 @@ int main(int argc, char *argv[]) {
   }
 
   DisplayData dispData;
-  std::thread inputThread(KeyboardInput,std::ref(dispData));
+  std::thread inputThread(KeyboardInput, std::ref(dispData));
 
 
   while(1){
+    dispData.updateTime();
+
     if(bUpdateDisplay){
-      sprintf(sScore, "%2d %2d", dispData.getScoreA(), dispData.getScoreB());
+      sprintf(sScoreA, "%2d ", dispData.getScoreA());
+      sprintf(sScoreB, "%2d", dispData.getScoreB());
       sprintf(sTime, "%02d:%02d", dispData.getMin(), dispData.getSec());
-      rgb_matrix::DrawText(canvas, font, 0, -1 + font.baseline(), color, outline_font ? NULL : &bg_color, sScore, letter_spacing);
-      rgb_matrix::DrawText(canvas, font, 0, 10 + font.baseline(), color, outline_font ? NULL : &bg_color, sTime, letter_spacing);
+      rgb_matrix::DrawText(canvas, font, 0, -1 + font.baseline(), teamAColor, outline_font ? NULL : &bg_color, sScoreA, letter_spacing);
+      rgb_matrix::DrawText(canvas, font, 18, -1 + font.baseline(), teamBColor, outline_font ? NULL : &bg_color, sScoreB, letter_spacing);
+      rgb_matrix::DrawText(canvas, font, 0, 10 + font.baseline(), timeColor, outline_font ? NULL : &bg_color, sTime, letter_spacing);
       bUpdateDisplay = false;
     }
     if(bExit)
     {
       break;
     }
-
-    usleep(100 * 1000);
+    usleep(200 * 1000);
   }
 
-  //usleep(5000 * 1000);
   endwin();
   canvas->Clear();
   delete canvas;
@@ -185,19 +235,30 @@ int main(int argc, char *argv[]) {
 void KeyboardInput(DisplayData& dispData)
 {
   char nInput;
-  while(1){
-    //printw("%2d %02d:%02d %2d\r", dispData.getScoreA(), dispData.getMin(), dispData.getSec(), dispData.getScoreB());
+  static int nResetCnt=0;
 
+  while(1){
+    printw("%2d %02d:%02d %2d\r", dispData.getScoreA(), dispData.getMin(), dispData.getSec(), dispData.getScoreB());
     // Check input
     nInput = getch();
     switch(nInput){
       case '1': dispData.incScoreA(); break;
       case '2': dispData.incScoreB(); break;
-      case '3': dispData.resetScore(); break;
+      case 'r': nResetCnt++;
+        if(nResetCnt > 40)
+        {
+          dispData.resetScore();
+          nResetCnt = 0;
+        }
+        break;
       case '4': dispData.setTime(600); break;
+      case '5': dispData.startTimer(); break;
+      case '6': dispData.stopTimer(); break;
+      case '7': dispData.setTime(10); break;
       case 'q': bExit = true; break;
       //case 'x': std::exit(0);//std::terminate();
     }
     bUpdateDisplay = true;
   }
 }
+
