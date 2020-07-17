@@ -24,9 +24,9 @@ DEFAULT_CHAR 0
 FONT_DESCENT 2
 FONT_ASCENT 11
 COPYRIGHT "Public domain font.  Share and enjoy."
-_XMBDFED_INFO "Edited with xmbdfed 4.5."
 CAP_HEIGHT 9
 X_HEIGHT 6
+_GBDFED_INFO "Edited with gbdfed 1.6."
 ENDPROPERTIES
 CHARS 1282
 STARTCHAR char0
@@ -579,13 +579,13 @@ BITMAP
 00
 00
 30
-78
 30
 00
 00
+00
 30
-78
 30
+00
 00
 00
 ENDCHAR
