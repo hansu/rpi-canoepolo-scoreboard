@@ -15,17 +15,90 @@
 #include <stdlib.h>
 #include <string.h>
 #include <curses.h>
-#include <thread> 
+#include <thread>
 
 using rgb_matrix::GPIO;
 using rgb_matrix::RGBMatrix;
 using rgb_matrix::Canvas;
+
+class DisplayData
+{
+public:
+  DisplayData() : m_nScoreA(0), m_nScoreB(0), m_nPlayTimeSec(600)
+  {
+  }
+
+  int getScoreA()
+  {
+    return m_nScoreA;
+  }
+
+  int getScoreB()
+  {
+    return m_nScoreB;
+  }
+
+  void incScoreA()
+  {
+    m_nScoreA++;
+  }
+
+  void incScoreB()
+  {
+    m_nScoreB++;
+  }
+
+  void decScoreA()
+  {
+    if(m_nScoreA > 0)
+      m_nScoreA--;
+  }
+
+  void decScoreB()
+  {
+    if(m_nScoreB > 0)
+      m_nScoreB--;
+  }
+
+  void resetScore()
+  {
+    m_nScoreA = 0;
+    m_nScoreB = 0;
+  }
+
+  int getMin()
+  {
+    return m_nPlayTimeSec/60;
+  }
+
+  int getSec()
+  {
+    return m_nPlayTimeSec%60;
+  }
+
+  void setTime(int nSec)
+  {
+    m_nPlayTimeSec = nSec;
+  }
+
+  void setTime(int nMin, int nSec)
+  {
+    m_nPlayTimeSec = nMin*60 + nSec;
+  }
+
+private:
+  int m_nScoreA, m_nScoreB, m_nPlayTimeSec;
+
+};
 
 volatile bool interrupt_received = false;
 static void InterruptHandler(int signo) {
   interrupt_received = true;
 }
 
+void KeyboardInput(DisplayData& dispData);
+volatile bool bUpdateDisplay = true;
+volatile bool bExit = false;
 
 int main(int argc, char *argv[]) {
   RGBMatrix::Options defaults;
@@ -39,13 +112,12 @@ int main(int argc, char *argv[]) {
   defaults.multiplexing = 6;
   defaults.inverse_colors = false;
   defaults.led_rgb_sequence = "BGR";
-  char sScore[10];
-  char sTime[10];
-  int nScoreA=0, nScoreB=0, nPlayTime=600;
-  char nInput;
-  
+  char sScore[24];
+  char sTime[24];
+
   // initializing curses lib
   initscr();
+  noecho();
   timeout(-1); // set to blocking mode - otherwise time out value
 
   Canvas *canvas = rgb_matrix::CreateMatrixFromFlags(&argc, &argv, &defaults);
@@ -83,31 +155,49 @@ int main(int argc, char *argv[]) {
       outline_font = font.CreateOutlineFont();
   }
 
+  DisplayData dispData;
+  std::thread inputThread(KeyboardInput,std::ref(dispData));
+
 
   while(1){
-    sprintf(sScore, "%2d %2d", nScoreA, nScoreB);
-    sprintf(sTime, "%02d:%02d", nPlayTime/60, nPlayTime%60);
-    rgb_matrix::DrawText(canvas, font, 0, -1 + font.baseline(), color, outline_font ? NULL : &bg_color, sScore, letter_spacing);
-    rgb_matrix::DrawText(canvas, font, 0, 10 + font.baseline(), color, outline_font ? NULL : &bg_color, sTime, letter_spacing);
+    if(bUpdateDisplay){
+      sprintf(sScore, "%2d %2d", dispData.getScoreA(), dispData.getScoreB());
+      sprintf(sTime, "%02d:%02d", dispData.getMin(), dispData.getSec());
+      rgb_matrix::DrawText(canvas, font, 0, -1 + font.baseline(), color, outline_font ? NULL : &bg_color, sScore, letter_spacing);
+      rgb_matrix::DrawText(canvas, font, 0, 10 + font.baseline(), color, outline_font ? NULL : &bg_color, sTime, letter_spacing);
+      bUpdateDisplay = false;
+    }
+    if(bExit)
+    {
+      break;
+    }
+
+    usleep(100 * 1000);
+  }
+
+  //usleep(5000 * 1000);
+  endwin();
+  canvas->Clear();
+  delete canvas;
+  return 0;
+}
+
+void KeyboardInput(DisplayData& dispData)
+{
+  char nInput;
+  while(1){
+    //printw("%2d %02d:%02d %2d\r", dispData.getScoreA(), dispData.getMin(), dispData.getSec(), dispData.getScoreB());
 
     // Check input
     nInput = getch();
     switch(nInput){
-      case '+': nScoreA++; break;
-      case '-': nScoreA--; break;
-      case 'r': //nLongPressCnt++;
-        nScoreA=0;
-        break;
-      case 'q':
-      case 'x':
-        endwin();
-        delete canvas;
-        return 0;
+      case '1': dispData.incScoreA(); break;
+      case '2': dispData.incScoreB(); break;
+      case '3': dispData.resetScore(); break;
+      case '4': dispData.setTime(600); break;
+      case 'q': bExit = true; break;
+      //case 'x': std::exit(0);//std::terminate();
     }
+    bUpdateDisplay = true;
   }
-
-  //usleep(5000 * 1000);
-  canvas->Clear();
-  delete canvas;
-  return 0;
 }
