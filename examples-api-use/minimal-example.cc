@@ -24,6 +24,7 @@ using rgb_matrix::RGBMatrix;
 using rgb_matrix::Canvas;
 
 volatile bool bUpdateDisplay = true;
+char sScoreA[24], sScoreB[24], sTime[24];
 
 class DisplayData
 {
@@ -146,19 +147,23 @@ volatile bool bExit = false;
 
 
 int main(int argc, char *argv[]) {
+
+  rgb_matrix::RuntimeOptions runtime;  
+  runtime.gpio_slowdown = 4;
+  
   RGBMatrix::Options defaults;
   defaults.hardware_mapping = "regular";  // or e.g. "adafruit-hat"
-  defaults.rows = 32;
-  defaults.chain_length = 1;
+  defaults.rows = 16;
+  defaults.cols = 32;
+  defaults.chain_length = 6;
   defaults.parallel = 1;
+  defaults.pixel_mapper_config = "V-mapper:Z;Rotate:90";
   defaults.show_refresh_rate = false;
-  defaults.pwm_lsb_nanoseconds = 200;
-  defaults.brightness = 50;
-  defaults.multiplexing = 6;
+  //defaults.pwm_lsb_nanoseconds = 200;
+  defaults.brightness = 60;
+  defaults.multiplexing = 3;
   defaults.inverse_colors = false;
-  defaults.led_rgb_sequence = "BGR";
-  char sScoreA[24], sScoreB[24];
-  char sTime[24];
+  defaults.led_rgb_sequence = "RGB";
 
   // initializing curses lib
   initscr();
@@ -184,25 +189,22 @@ int main(int argc, char *argv[]) {
   rgb_matrix::Color bg_color(0, 0, 0);
   rgb_matrix::Color outline_color(0,0,0);
   int letter_spacing = 0;
-  bool with_outline = false;
 
   /*
-   * Load font. This needs to be a filename with a bdf bitmap font.
+   * Load bdf bitmap fonts.
    */
-  rgb_matrix::Font font;
-  if (!font.LoadFont("../fonts/6x13B.bdf")) {
-    fprintf(stderr, "Couldn't load font '%s'\n", "../fonts/7x13.bdf");
+  rgb_matrix::Font font_std, font_narr, font_xnarr;
+  
+  if (!font_std.LoadFont("../fonts2/LiberationSansNarrow_bb32.bdf")) {
+    fprintf(stderr, "Couldn't load std font '%s'\n", "../fonts2/LiberationSansNarrow_bb32.bdf");
     return 1;
   }
-  /*
-   * If we want an outline around the font, we create a new font with
-   * the original font as a template that is just an outline font.
-   */
-  rgb_matrix::Font *outline_font = NULL;
-  if (with_outline) {
-      outline_font = font.CreateOutlineFont();
+  if (!font_narr.LoadFont("../fonts2/antonio_b32.bdf")) {
+    fprintf(stderr, "Couldn't load narow font '%s'\n", "../fonts2/antonio_b32.bdf");
+    return 1;
   }
-
+  
+  
   DisplayData dispData;
   std::thread inputThread(KeyboardInput, std::ref(dispData));
 
@@ -214,9 +216,10 @@ int main(int argc, char *argv[]) {
       sprintf(sScoreA, "%2d ", dispData.getScoreA());
       sprintf(sScoreB, "%2d", dispData.getScoreB());
       sprintf(sTime, "%02d:%02d", dispData.getMin(), dispData.getSec());
-      rgb_matrix::DrawText(canvas, font, 0, -1 + font.baseline(), teamAColor, outline_font ? NULL : &bg_color, sScoreA, letter_spacing);
-      rgb_matrix::DrawText(canvas, font, 18, -1 + font.baseline(), teamBColor, outline_font ? NULL : &bg_color, sScoreB, letter_spacing);
-      rgb_matrix::DrawText(canvas, font, 0, 10 + font.baseline(), timeColor, outline_font ? NULL : &bg_color, sTime, letter_spacing);
+      canvas->Clear();
+      rgb_matrix::DrawText(canvas, font_narr, 0, 32, teamAColor, &bg_color, sScoreA, letter_spacing);
+      rgb_matrix::DrawText(canvas, font_std, 35, 32, timeColor,  &bg_color, sTime,   letter_spacing);
+      rgb_matrix::DrawText(canvas, font_narr, 125, 32, teamBColor, &bg_color, sScoreB, letter_spacing); // to be adjusted
       bUpdateDisplay = false;
     }
     if(bExit)
@@ -238,12 +241,13 @@ void KeyboardInput(DisplayData& dispData)
   static int nResetCnt=0;
 
   while(1){
-    printw("%2d %02d:%02d %2d\r", dispData.getScoreA(), dispData.getMin(), dispData.getSec(), dispData.getScoreB());
     // Check input
     nInput = getch();
     switch(nInput){
-      case '1': dispData.incScoreA(); break;
-      case '2': dispData.incScoreB(); break;
+      case '4': dispData.incScoreA(); break;
+      case '1': dispData.decScoreA(); break;            
+      case '5': dispData.incScoreB(); break;
+      case '2': dispData.decScoreB(); break;
       case 'r': nResetCnt++;
         if(nResetCnt > 40)
         {
@@ -251,13 +255,15 @@ void KeyboardInput(DisplayData& dispData)
           nResetCnt = 0;
         }
         break;
-      case '4': dispData.setTime(600); break;
-      case '5': dispData.startTimer(); break;
-      case '6': dispData.stopTimer(); break;
+//      case '7': dispData.setTime(600); break;
       case '7': dispData.setTime(10); break;
+      case '8': dispData.startTimer(); break;
+      case '9': dispData.stopTimer(); break;
       case 'q': bExit = true; break;
       //case 'x': std::exit(0);//std::terminate();
     }
+    //printw("%2d %02d:%02d %2d\r", sScoreA, dispData.getMin(), dispData.getSec(), sScoreB);
+    printw("%s %s %s\r", sScoreA, sTime, sScoreB);
     bUpdateDisplay = true;
   }
 }
