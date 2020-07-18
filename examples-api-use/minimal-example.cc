@@ -257,7 +257,7 @@ int rfind_deque(std::deque<char> &source, std::deque<char> val){
 void KeyboardInput(DisplayData& dispData)
 {
   char nInput;
-  static int nResetCnt=0;
+  static int nResetCnt=0, nExitCnt=0;
   static std::deque<char> buf;
   const std::deque<char> num1_end =      {'\e','[','F'};
   const std::deque<char> num2_down =     {'\e','[','B'};
@@ -269,6 +269,7 @@ void KeyboardInput(DisplayData& dispData)
   const std::deque<char> num8_up =       {'\e','[','A'};
   const std::deque<char> num9_pg_up =    {'\e','[','5','~'};
   const std::deque<char> num_del =       {'\e','[','3','~'};
+  
 
   while(1){
     // Check input
@@ -282,20 +283,27 @@ void KeyboardInput(DisplayData& dispData)
       case '*':
       case 127: // backspace
         nResetCnt++;
-        if(nResetCnt > 40)
+        if(nResetCnt > 40) // 2 seconds
         {
           dispData.resetScore();
           dispData.stopTimer();
           dispData.setTime(600);
           nResetCnt = 0;
-        }
-        break;
+        }      
+        break;       
       case '7': dispData.setTime(600); break;
       case 10: // return
       case '8': dispData.startTimer(); break;      
       case '+': dispData.stopTimer(); break;
       case 'q': bExit = true; break;
       //case 'x': std::exit(0);//std::terminate();
+      case '/':
+        nExitCnt++;
+        if(nExitCnt > 200)
+        {
+          bExit = true;
+        }  
+        break;
       default: 
         buf.push_back(nInput);
         if(buf.size() > 5)
