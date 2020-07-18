@@ -18,6 +18,8 @@
 #include <thread>
 #include "mytimer.h"
 #include <time.h>
+#include <iostream>
+#include <deque>
 
 using rgb_matrix::GPIO;
 using rgb_matrix::RGBMatrix;
@@ -193,14 +195,14 @@ int main(int argc, char *argv[]) {
   /*
    * Load bdf bitmap fonts.
    */
-  rgb_matrix::Font font_std, font_narr, font_xnarr;
+  rgb_matrix::Font font_std, font_narr;
   
   if (!font_std.LoadFont("../fonts2/LiberationSansNarrow_bb32.bdf")) {
     fprintf(stderr, "Couldn't load std font '%s'\n", "../fonts2/LiberationSansNarrow_bb32.bdf");
     return 1;
   }
   if (!font_narr.LoadFont("../fonts2/antonio_b32.bdf")) {
-    fprintf(stderr, "Couldn't load narow font '%s'\n", "../fonts2/antonio_b32.bdf");
+    fprintf(stderr, "Couldn't load narrow font '%s'\n", "../fonts2/antonio_b32.bdf");
     return 1;
   }
   
@@ -220,6 +222,7 @@ int main(int argc, char *argv[]) {
       rgb_matrix::DrawText(canvas, font_narr, 0, 32, teamAColor, &bg_color, sScoreA, letter_spacing);
       rgb_matrix::DrawText(canvas, font_std, 35, 32, timeColor,  &bg_color, sTime,   letter_spacing);
       rgb_matrix::DrawText(canvas, font_narr, 125, 32, teamBColor, &bg_color, sScoreB, letter_spacing); // to be adjusted
+      printw("%2d %s %2d\r", dispData.getScoreA(), sTime, dispData.getScoreB());          
       bUpdateDisplay = false;
     }
     if(bExit)
@@ -235,10 +238,37 @@ int main(int argc, char *argv[]) {
   return 0;
 }
 
+int rfind_deque(std::deque<char> &source, std::deque<char> val){
+  std::deque<char>::reverse_iterator it_src = source.rbegin();
+  std::deque<char>::reverse_iterator it_val;
+  for (it_val = val.rbegin(); it_val != val.rend(); ++it_val){
+    if(*it_val != *it_src){
+      return -1;
+    }    
+    it_src++;
+  }
+  
+  if(it_val == val.rend())
+    return 0;
+  else 
+    return -1;  
+}
+
 void KeyboardInput(DisplayData& dispData)
 {
   char nInput;
   static int nResetCnt=0;
+  static std::deque<char> buf;
+  const std::deque<char> num1_end =      {'\e','[','F'};
+  const std::deque<char> num2_down =     {'\e','[','B'};
+  const std::deque<char> num3_pg_down =  {'\e','[','6','~'};
+  const std::deque<char> num4_left =     {'\e','[','D'};
+  const std::deque<char> num5 =          {'\e','[','E'};
+  const std::deque<char> num6_right =    {'\e','[','C'};
+  const std::deque<char> num7_pos1 =     {'\e','[','H'};
+  const std::deque<char> num8_up =       {'\e','[','A'};
+  const std::deque<char> num9_pg_up =    {'\e','[','5','~'};
+  const std::deque<char> num_del =       {'\e','[','3','~'};
 
   while(1){
     // Check input
@@ -248,22 +278,38 @@ void KeyboardInput(DisplayData& dispData)
       case '1': dispData.decScoreA(); break;            
       case '5': dispData.incScoreB(); break;
       case '2': dispData.decScoreB(); break;
-      case 'r': nResetCnt++;
+      case 'r': 
+      case '*':
+      case 127: // backspace
+        nResetCnt++;
         if(nResetCnt > 40)
         {
           dispData.resetScore();
+          dispData.stopTimer();
+          dispData.setTime(600);
           nResetCnt = 0;
         }
         break;
-//      case '7': dispData.setTime(600); break;
-      case '7': dispData.setTime(10); break;
-      case '8': dispData.startTimer(); break;
-      case '9': dispData.stopTimer(); break;
+      case '7': dispData.setTime(600); break;
+      case 10: // return
+      case '8': dispData.startTimer(); break;      
+      case '+': dispData.stopTimer(); break;
       case 'q': bExit = true; break;
       //case 'x': std::exit(0);//std::terminate();
+      default: 
+        buf.push_back(nInput);
+        if(buf.size() > 5)
+          buf.pop_front();
+
+        // alternative input when num lock is activated
+        if(rfind_deque(buf, num1_end) == 0)           dispData.decScoreA();
+        else if(rfind_deque(buf, num2_down) == 0)     dispData.decScoreB();
+        else if(rfind_deque(buf, num4_left) == 0)     dispData.incScoreA();
+        else if(rfind_deque(buf, num5) == 0)          dispData.incScoreB();
+
+        break;   
     }
-    //printw("%2d %02d:%02d %2d\r", sScoreA, dispData.getMin(), dispData.getSec(), sScoreB);
-    printw("%s %s %s\r", sScoreA, sTime, sScoreB);
+    printw("%2d %02d:%02d %2d\r", dispData.getScoreA(), dispData.getMin(), dispData.getSec(), dispData.getScoreB());          
     bUpdateDisplay = true;
   }
 }
