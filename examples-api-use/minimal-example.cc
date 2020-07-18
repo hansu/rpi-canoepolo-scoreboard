@@ -19,8 +19,8 @@
 #include "mytimer.h"
 #include <time.h>
 #include <iostream>
-#include <deque>
-
+#include <string>
+ 
 using rgb_matrix::GPIO;
 using rgb_matrix::RGBMatrix;
 using rgb_matrix::Canvas;
@@ -222,7 +222,6 @@ int main(int argc, char *argv[]) {
       rgb_matrix::DrawText(canvas, font_narr, 0, 32, teamAColor, &bg_color, sScoreA, letter_spacing);
       rgb_matrix::DrawText(canvas, font_std, 35, 32, timeColor,  &bg_color, sTime,   letter_spacing);
       rgb_matrix::DrawText(canvas, font_narr, 125, 32, teamBColor, &bg_color, sScoreB, letter_spacing); // to be adjusted
-      printw("%2d %s %2d\r", dispData.getScoreA(), sTime, dispData.getScoreB());          
       bUpdateDisplay = false;
     }
     if(bExit)
@@ -238,37 +237,29 @@ int main(int argc, char *argv[]) {
   return 0;
 }
 
-int rfind_deque(std::deque<char> &source, std::deque<char> val){
-  std::deque<char>::reverse_iterator it_src = source.rbegin();
-  std::deque<char>::reverse_iterator it_val;
-  for (it_val = val.rbegin(); it_val != val.rend(); ++it_val){
-    if(*it_val != *it_src){
-      return -1;
-    }    
-    it_src++;
-  }
-  
-  if(it_val == val.rend())
-    return 0;
-  else 
-    return -1;  
+/*
+ * Search for str2 in str1
+ * Return true if str2 found at the end of str1 
+ */
+bool rfind_str(std::string &str1, std::string str2){
+  return (str1.substr(str1.size()-str2.size(), str2.size()) == str2);
 }
 
 void KeyboardInput(DisplayData& dispData)
 {
   char nInput;
   static int nResetCnt=0, nExitCnt=0;
-  static std::deque<char> buf;
-  const std::deque<char> num1_end =      {'\e','[','F'};
-  const std::deque<char> num2_down =     {'\e','[','B'};
-  const std::deque<char> num3_pg_down =  {'\e','[','6','~'};
-  const std::deque<char> num4_left =     {'\e','[','D'};
-  const std::deque<char> num5 =          {'\e','[','E'};
-  const std::deque<char> num6_right =    {'\e','[','C'};
-  const std::deque<char> num7_pos1 =     {'\e','[','H'};
-  const std::deque<char> num8_up =       {'\e','[','A'};
-  const std::deque<char> num9_pg_up =    {'\e','[','5','~'};
-  const std::deque<char> num_del =       {'\e','[','3','~'};
+  static std::string sBuf = "    ";
+  const std::string sDecScoreA =    {"\e[F"};  // end
+  const std::string sDecScoreB =    {"\e[B"};  // down
+  const std::string num3_pg_down =  {"\e[6~"}; // page down
+  const std::string sIncScoreA =    {"\e[D"};  // left
+  const std::string sIncScoreB =    {"\e[E"};  // 5 alt
+  const std::string num6_right =    {"\e[C"};  // right
+  const std::string num7_pos1 =     {"\e[H"};  // home
+  const std::string num8_up =       {"\e[A"};  // up
+  const std::string num9_pg_up =    {"\e[5~"}; // page up
+  const std::string num_del =       {"\e[3~"}; // del
   
 
   while(1){
@@ -305,19 +296,20 @@ void KeyboardInput(DisplayData& dispData)
         }  
         break;
       default: 
-        buf.push_back(nInput);
-        if(buf.size() > 5)
-          buf.pop_front();
+        sBuf.push_back(nInput);  
+        if(sBuf.size() > 4)
+          sBuf.erase(0, 1);
+          
 
-        // alternative input when num lock is activated
-        if(rfind_deque(buf, num1_end) == 0)           dispData.decScoreA();
-        else if(rfind_deque(buf, num2_down) == 0)     dispData.decScoreB();
-        else if(rfind_deque(buf, num4_left) == 0)     dispData.incScoreA();
-        else if(rfind_deque(buf, num5) == 0)          dispData.incScoreB();
+         // alternative input when num lock is activated 
+        if(rfind_str(sBuf, sIncScoreA))       dispData.incScoreA();
+        else if(rfind_str(sBuf, sDecScoreA))  dispData.decScoreA();          
+        else if(rfind_str(sBuf, sIncScoreB))  dispData.incScoreB();
+        else if(rfind_str(sBuf, sDecScoreB))  dispData.decScoreB();
 
         break;   
     }
-    printw("%2d %02d:%02d %2d\r", dispData.getScoreA(), dispData.getMin(), dispData.getSec(), dispData.getScoreB());          
+   // printw("%2d %02d:%02d %2d\r", dispData.getScoreA(), dispData.getMin(), dispData.getSec(), dispData.getScoreB());          
     bUpdateDisplay = true;
   }
 }
