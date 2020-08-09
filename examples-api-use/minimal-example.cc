@@ -157,12 +157,12 @@ int main(int argc, char *argv[]) {
   defaults.hardware_mapping = "regular";  // or e.g. "adafruit-hat"
   defaults.rows = 16;
   defaults.cols = 32;
-  defaults.chain_length = 6;
-  defaults.parallel = 1;
-  defaults.pixel_mapper_config = "V-mapper:Z;Rotate:90";
+  defaults.chain_length = 5;
+  defaults.parallel = 2;
+  //defaults.pixel_mapper_config = "V-mapper:Z;Rotate:90";
   defaults.show_refresh_rate = false;
   //defaults.pwm_lsb_nanoseconds = 200;
-  defaults.brightness = 60;
+  defaults.brightness = 50;
   defaults.multiplexing = 3;
   defaults.inverse_colors = false;
   defaults.led_rgb_sequence = "RGB";
@@ -189,7 +189,7 @@ int main(int argc, char *argv[]) {
   rgb_matrix::Color teamBColor(0, 200, 255);
 
   rgb_matrix::Color bg_color(0, 0, 0);
-  rgb_matrix::Color outline_color(0,0,0);
+  rgb_matrix::Color outline_color(255,255,255);
   int letter_spacing = 0;
 
   /*
@@ -220,8 +220,15 @@ int main(int argc, char *argv[]) {
       sprintf(sTime, "%02d:%02d", dispData.getMin(), dispData.getSec());
       canvas->Clear();
       rgb_matrix::DrawText(canvas, font_narr, 0, 32, teamAColor, &bg_color, sScoreA, letter_spacing);
-      rgb_matrix::DrawText(canvas, font_std, 35, 32, timeColor,  &bg_color, sTime,   letter_spacing);
-      rgb_matrix::DrawText(canvas, font_narr, 125, 32, teamBColor, &bg_color, sScoreB, letter_spacing); // to be adjusted
+      rgb_matrix::DrawText(canvas, font_std, 36, 32, timeColor,  &bg_color, sTime,   letter_spacing);
+      rgb_matrix::DrawText(canvas, font_narr, 128, 32, teamBColor, &bg_color, sScoreB, letter_spacing); // to be adjusted
+
+//      Für Stromaufnahme-Test      
+//      canvas->Clear();
+//      for(int i=0; i<16; i++){
+//       rgb_matrix::DrawLine(canvas, 0, i, 768, i, outline_color);
+//      }
+      
       bUpdateDisplay = false;
     }
     if(bExit)
@@ -250,26 +257,22 @@ void KeyboardInput(DisplayData& dispData)
   char nInput;
   static int nResetCnt=0, nExitCnt=0;
   static std::string sBuf = "    ";
-  const std::string sDecScoreA =    {"\e[F"};  // end
-  const std::string sDecScoreB =    {"\e[B"};  // down
-  const std::string num3_pg_down =  {"\e[6~"}; // page down
-  const std::string sIncScoreA =    {"\e[D"};  // left
-  const std::string sIncScoreB =    {"\e[E"};  // 5 alt
-  const std::string num6_right =    {"\e[C"};  // right
-  const std::string num7_pos1 =     {"\e[H"};  // home
-  const std::string num8_up =       {"\e[A"};  // up
-  const std::string num9_pg_up =    {"\e[5~"}; // page up
-  const std::string num_del =       {"\e[3~"}; // del
-  
+
+
+  const std::string sIncScoreA =    {"\e[A"};  // up
+  const std::string sDecScoreA =    {"\e[B"};  // down  
+  const std::string sIncScoreB =    {"\e[5~"}; // pg up
+  const std::string sDecScoreB =    {"\e[6~"}; // pg down
+ 
 
   while(1){
     // Check input
     nInput = getch();
     switch(nInput){
-      case '4': dispData.incScoreA(); break;
-      case '1': dispData.decScoreA(); break;            
-      case '5': dispData.incScoreB(); break;
-      case '2': dispData.decScoreB(); break;
+      case '8': dispData.incScoreA(); break;
+      case '2': dispData.decScoreA(); break;            
+      case '9': dispData.incScoreB(); break;
+      case '3': dispData.decScoreB(); break;
       case 'r': 
       case '*':
       case 127: // backspace
@@ -282,28 +285,29 @@ void KeyboardInput(DisplayData& dispData)
           nResetCnt = 0;
         }      
         break;       
-      case '7': dispData.setTime(600); break;
+      case '*': dispData.setTime(600); break;
       case 10: // return
-      case '8': dispData.startTimer(); break;      
-      case '+': dispData.stopTimer(); break;
+      case '+': 
+          dispData.startTimer(); break;      
+      case '-': dispData.stopTimer(); break;
       case 'q': bExit = true; break;
       //case 'x': std::exit(0);//std::terminate();
       case '/':
         nExitCnt++;
-        if(nExitCnt > 200)
+        if(nExitCnt > 150)
         {
           bExit = true;
         }  
         break;
       default: 
         sBuf.push_back(nInput);  
-        if(sBuf.size() > 4)
+        if(sBuf.size() > 5)
           sBuf.erase(0, 1);
           
 
          // alternative input when num lock is activated 
         if(rfind_str(sBuf, sIncScoreA))       dispData.incScoreA();
-        else if(rfind_str(sBuf, sDecScoreA))  dispData.decScoreA();          
+        else if(rfind_str(sBuf, sDecScoreA))  dispData.decScoreA();    
         else if(rfind_str(sBuf, sIncScoreB))  dispData.incScoreB();
         else if(rfind_str(sBuf, sDecScoreB))  dispData.decScoreB();
 
