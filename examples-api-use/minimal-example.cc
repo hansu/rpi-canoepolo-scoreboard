@@ -261,13 +261,29 @@ int main(int argc, char *argv[]) {
     dispData.updateTime();
 
     if(bUpdateDisplay){
-      sprintf(sScoreA, "%2d ", dispData.getScoreA());
-      sprintf(sScoreB, "%2d", dispData.getScoreB());
       sprintf(sTime, "%2d:%02d", dispData.getMin(), dispData.getSec());
       canvas->Clear();
-      rgb_matrix::DrawText(canvas, font_narr, 0, 32, teamAColor, &bg_color, sScoreA, letter_spacing);
+      
+      if(dispData.getScoreA() < 10){
+        sprintf(sScoreA, "%d ", dispData.getScoreA());
+        rgb_matrix::DrawText(canvas, font_std, 0, 32, teamAColor, &bg_color, sScoreA, letter_spacing);
+      }      
+      else{      
+        sprintf(sScoreA, "%2d ", dispData.getScoreA());
+        rgb_matrix::DrawText(canvas, font_narr, 0, 32, teamAColor, &bg_color, sScoreA, letter_spacing);
+      }
       rgb_matrix::DrawText(canvas, font_std, 36, 32, timeColor,  &bg_color, sTime,   letter_spacing);
-      rgb_matrix::DrawText(canvas, font_narr, 128, 32, teamBColor, &bg_color, sScoreB, letter_spacing); // to be adjusted
+      
+      if(dispData.getScoreB() < 10){
+        sprintf(sScoreB, "%d", dispData.getScoreB());
+        rgb_matrix::DrawText(canvas, font_std, 139, 32, teamBColor, &bg_color, sScoreB, letter_spacing);
+      }
+      else{
+        sprintf(sScoreB, "%2d", dispData.getScoreB());
+        rgb_matrix::DrawText(canvas, font_narr, 128, 32, teamBColor, &bg_color, sScoreB, letter_spacing);
+      }
+       
+      
 
 //      Für Stromaufnahme-Test      
 //      canvas->Clear();
