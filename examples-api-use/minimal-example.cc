@@ -28,7 +28,7 @@ using rgb_matrix::Canvas;
 volatile bool bUpdateDisplay = true;
 char sScoreA[24], sScoreB[24], sTime[24];
 typedef enum states { idle, running, paused } states_t;
-typedef enum colors { white, yellow, red, blue, green } colors_t;
+typedef enum colors { white, yellow, red, blue, green, orange, violet } colors_t;
 #define NUM_COLORS 5
 
 class DisplayData
@@ -88,10 +88,13 @@ public:
     if(m_state != running){
       m_nPlayTimeSec += nValue;
       
-      if(m_nPlayTimeSec == -55)
+      // only for testing to be ableto select 5 seconds
+      if(m_nPlayTimeSec == -57)
         m_nPlayTimeSec = 0;
+      else if(m_nPlayTimeSec == -60)
+        m_nPlayTimeSec = 0;        
       else if(m_nPlayTimeSec <= 0)
-        m_nPlayTimeSec = 5;
+        m_nPlayTimeSec = 3;
     }
   }
 
@@ -175,10 +178,12 @@ volatile bool bExit = false;
 
 
 rgb_matrix::Color color_red(255, 0, 0);
-rgb_matrix::Color color_yellow(214, 183, 0);
+rgb_matrix::Color color_yellow(250, 190, 0);
 rgb_matrix::Color color_blue(0, 30, 220);
 rgb_matrix::Color color_green(0, 200, 0);
-rgb_matrix::Color color_white(180, 180, 180);
+rgb_matrix::Color color_white(175, 175, 175);
+rgb_matrix::Color color_orange(250, 130, 0);
+rgb_matrix::Color color_violet(220, 0, 220);
 
 rgb_matrix::Color* pTimeColor;
 rgb_matrix::Color* pTeamAColor;
@@ -191,6 +196,8 @@ rgb_matrix::Color* GetPColor(colors_t nColorIndex){
     case yellow: return &color_yellow;
     case blue:   return &color_blue;
     case green:  return &color_green;
+    case orange: return &color_orange;
+    case violet: return &color_violet;
     case white: 
     default: 
                  return &color_white; 
@@ -214,7 +221,7 @@ int main(int argc, char *argv[]) {
   //options.pixel_mapper_config = "V-mapper:Z;Rotate:90";
   options.show_refresh_rate = false;
   //options.pwm_lsb_nanoseconds = 200;
-  options.brightness = 20;
+  options.brightness = 100;
   options.multiplexing = 3;
   options.inverse_colors = false;
   options.led_rgb_sequence = "RGB";
@@ -276,8 +283,11 @@ int main(int argc, char *argv[]) {
         rgb_matrix::DrawText(canvas, font_narr, 0, 32, *GetPColor(dispData.getColorIndexA()), &bg_color, sScoreA, letter_spacing);
       }
       
-      sprintf(sTime, "%2d:%02d", dispData.getMin(), dispData.getSec());    
-      if(dispData.getMin() < 10)
+      sprintf(sTime, "%2d:%02d", dispData.getMin(), dispData.getSec()); 
+      
+      if(dispData.getMin() == 1)
+        rgb_matrix::DrawText(canvas, font_std, 35, 32, *pTimeColor,  &bg_color, sTime,   letter_spacing);         
+      else if(dispData.getMin() < 10)
         rgb_matrix::DrawText(canvas, font_std, 29, 32, *pTimeColor,  &bg_color, sTime,   letter_spacing);
       else if(dispData.getMin() < 20)
         rgb_matrix::DrawText(canvas, font_std, 36, 32, *pTimeColor,  &bg_color, sTime,   letter_spacing);
