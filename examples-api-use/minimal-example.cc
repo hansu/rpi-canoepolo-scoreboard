@@ -28,46 +28,27 @@ using rgb_matrix::Canvas;
 volatile bool bUpdateDisplay = true;
 char sScoreA[24], sScoreB[24], sTime[24];
 typedef enum states { idle, running, paused } states_t;
+typedef enum colors { white, yellow, red, blue, green } colors_t;
+#define NUM_COLORS 5
 
 class DisplayData
 {
 public:
-  DisplayData() : m_nScoreA(0), m_nScoreB(0), m_nPlayTimeSec(600), m_bTimerStarted(false), m_state(idle)
-  {
-  }
+  DisplayData() : m_nScoreA(0), m_nScoreB(0), m_nPlayTimeSec(600), m_bTimerStarted(false), m_state(idle), m_teamAColorIndex(white), m_teamBColorIndex(white)  { }
 
-  int getScoreA()
-  {
-    return m_nScoreA;
-  }
-    
-  int getScoreB()
-  {
-    return m_nScoreB;
-  }
+  int getScoreA()  { return m_nScoreA; } 
+  
+  int getScoreB()  { return m_nScoreB; }
 
-  void setScoreA(int score)
-  {
-    m_nScoreA = score;
-  }
+  void setScoreA(int score)  { m_nScoreA = score; }
 
-  void setScoreB(int score)
-  {
-    m_nScoreB = score;
-  }
+  void setScoreB(int score)  { m_nScoreB = score; }
 
-  void incScoreA()
-  {
-    m_nScoreA++;
-  }
+  void incScoreA()  { m_nScoreA++; }
 
-  void incScoreB()
-  {
-    m_nScoreB++;
-  }
+  void incScoreB()  { m_nScoreB++; }
 
-  void decScoreA()
-  {
+  void decScoreA()  {
     if(m_nScoreA > 0)
       m_nScoreA--;
   }
@@ -84,15 +65,9 @@ public:
     m_nScoreB = 0;
   }
 
-  int getMin()
-  {
-    return m_nPlayTimeSec/60;
-  }
+  int getMin()  { return m_nPlayTimeSec/60; }
 
-  int getSec()
-  {
-    return m_nPlayTimeSec%60;
-  }
+  int getSec()  { return m_nPlayTimeSec%60; }
 
   void setTime(int nSec)
   {
@@ -106,10 +81,7 @@ public:
       m_nPlayTimeSec = nMin*60 + nSec;
   }
 
-  void decTime()
-  {
-    m_nPlayTimeSec--;
-  }
+  void decTime()  { m_nPlayTimeSec--; }
   
   void modifyTime(int nValue)
   {
@@ -122,7 +94,6 @@ public:
         m_nPlayTimeSec = 5;
     }
   }
-  
 
   void startTimer()
   {
@@ -131,10 +102,7 @@ public:
     m_bTimerStarted = true;
   }
 
-  void stopTimer()
-  {
-    m_bTimerStarted = false;
-  }
+  void stopTimer()  { m_bTimerStarted = false; }
 
   void updateTime()
   {
@@ -155,10 +123,7 @@ public:
       }
     }
   }
-  void setState(states_t state)
-  {
-    m_state = state;
-  }
+  void setState(states_t state)  { m_state = state; }
 
   states_t getState(void)
   {
@@ -175,14 +140,28 @@ public:
     }    
   }
   
-       
-    
+  colors_t getColorIndexA(void){ return m_teamAColorIndex; }    
+  
+  colors_t getColorIndexB(void){ return m_teamBColorIndex; }
+  
+  void nextColorIndexA(void){    
+    m_teamAColorIndex = (colors_t)((int)m_teamAColorIndex+1);    
+    if(m_teamAColorIndex >= NUM_COLORS)
+      m_teamAColorIndex = (colors_t)0;
+  }
+   
+  void nextColorIndexB(void){    
+    m_teamBColorIndex = (colors_t)((int)m_teamBColorIndex+1);    
+    if(m_teamBColorIndex >= NUM_COLORS)
+      m_teamBColorIndex = (colors_t)0;
+  }         
 private:
   int m_nScoreA, m_nScoreB, m_nPlayTimeSec;
+  colors_t m_teamAColorIndex, m_teamBColorIndex;
   time_t m_nStartTime;
   int m_nSeconds, m_nSecondsLast;
   bool m_bTimerStarted;
-  states_t m_state;
+  states_t m_state;  
 
 };
 
@@ -194,9 +173,31 @@ static void InterruptHandler(int signo) {
 void KeyboardInput(DisplayData& dispData);
 volatile bool bExit = false;
 
-  rgb_matrix::Color timeColor(255, 0, 0);
-  rgb_matrix::Color teamAColor(204, 183, 0);
-  rgb_matrix::Color teamBColor(0, 150, 191);
+
+rgb_matrix::Color color_red(255, 0, 0);
+rgb_matrix::Color color_yellow(214, 183, 0);
+rgb_matrix::Color color_blue(0, 30, 220);
+rgb_matrix::Color color_green(0, 200, 0);
+rgb_matrix::Color color_white(180, 180, 180);
+
+rgb_matrix::Color* pTimeColor;
+rgb_matrix::Color* pTeamAColor;
+rgb_matrix::Color* pTeamBColor;
+
+
+rgb_matrix::Color* GetPColor(colors_t nColorIndex){
+  switch(nColorIndex){
+    case red:    return &color_red;
+    case yellow: return &color_yellow;
+    case blue:   return &color_blue;
+    case green:  return &color_green;
+    case white: 
+    default: 
+                 return &color_white; 
+    }  
+}
+
+
 
 
 int main(int argc, char *argv[]) {
@@ -213,7 +214,7 @@ int main(int argc, char *argv[]) {
   //options.pixel_mapper_config = "V-mapper:Z;Rotate:90";
   options.show_refresh_rate = false;
   //options.pwm_lsb_nanoseconds = 200;
-  options.brightness = 100;
+  options.brightness = 20;
   options.multiplexing = 3;
   options.inverse_colors = false;
   options.led_rgb_sequence = "RGB";
@@ -252,6 +253,9 @@ int main(int argc, char *argv[]) {
     return 1;
   }
   
+  pTimeColor = &color_red;;
+  pTeamAColor = &color_white;
+  pTeamBColor = &color_white;
   
   DisplayData dispData;
   std::thread inputThread(KeyboardInput, std::ref(dispData));
@@ -261,30 +265,36 @@ int main(int argc, char *argv[]) {
     dispData.updateTime();
 
     if(bUpdateDisplay){
-      sprintf(sTime, "%2d:%02d", dispData.getMin(), dispData.getSec());
+
       canvas->Clear();
       
       if(dispData.getScoreA() < 10){
         sprintf(sScoreA, "%d ", dispData.getScoreA());
-        rgb_matrix::DrawText(canvas, font_std, 0, 32, teamAColor, &bg_color, sScoreA, letter_spacing);
-      }      
-      else{      
+        rgb_matrix::DrawText(canvas, font_std, 0, 32, *GetPColor(dispData.getColorIndexA()), &bg_color, sScoreA, letter_spacing);
+      } else{      
         sprintf(sScoreA, "%2d ", dispData.getScoreA());
-        rgb_matrix::DrawText(canvas, font_narr, 0, 32, teamAColor, &bg_color, sScoreA, letter_spacing);
+        rgb_matrix::DrawText(canvas, font_narr, 0, 32, *GetPColor(dispData.getColorIndexA()), &bg_color, sScoreA, letter_spacing);
       }
-      rgb_matrix::DrawText(canvas, font_std, 36, 32, timeColor,  &bg_color, sTime,   letter_spacing);
       
+      sprintf(sTime, "%2d:%02d", dispData.getMin(), dispData.getSec());    
+      if(dispData.getMin() < 10)
+        rgb_matrix::DrawText(canvas, font_std, 29, 32, *pTimeColor,  &bg_color, sTime,   letter_spacing);
+      else if(dispData.getMin() < 20)
+        rgb_matrix::DrawText(canvas, font_std, 36, 32, *pTimeColor,  &bg_color, sTime,   letter_spacing);
+      else
+        rgb_matrix::DrawText(canvas, font_std, 33, 32, *pTimeColor,  &bg_color, sTime,   letter_spacing);
+                 
       if(dispData.getScoreB() < 10){
         sprintf(sScoreB, "%d", dispData.getScoreB());
-        rgb_matrix::DrawText(canvas, font_std, 139, 32, teamBColor, &bg_color, sScoreB, letter_spacing);
-      }
-      else{
+        rgb_matrix::DrawText(canvas, font_std, 139, 32, *GetPColor(dispData.getColorIndexB()), &bg_color, sScoreB, letter_spacing);
+      } else {
         sprintf(sScoreB, "%2d", dispData.getScoreB());
-        rgb_matrix::DrawText(canvas, font_narr, 128, 32, teamBColor, &bg_color, sScoreB, letter_spacing);
-      }
-       
+        if(dispData.getScoreB() < 20)
+          rgb_matrix::DrawText(canvas, font_narr, 128+5, 32, *GetPColor(dispData.getColorIndexB()), &bg_color, sScoreB, letter_spacing);
+        else
+          rgb_matrix::DrawText(canvas, font_narr, 128, 32, *GetPColor(dispData.getColorIndexB()), &bg_color, sScoreB, letter_spacing);
+      }    
       
-
 //      Für Stromaufnahme-Test      
 //      canvas->Clear();
 //      for(int i=0; i<16; i++){
@@ -324,9 +334,10 @@ void KeyboardInput(DisplayData& dispData)
   const std::string sDecScoreA =    {"\e[B"};  // down  
   const std::string sIncScoreB =    {"\e[5~"}; // pg up
   const std::string sDecScoreB =    {"\e[6~"}; // pg down
-  //const std::string sStart     =    {"\e[2~"}; // insert
-   
+  const std::string sColorChangeA = {"\e[G"};  // keypad 5
+  const std::string sColorChangeB = {"\e[C"};  // right
 
+   
   while(1){
     // Check input
     nInput = getch();
@@ -353,15 +364,10 @@ void KeyboardInput(DisplayData& dispData)
           int nScoreACopy = dispData.getScoreA();
           dispData.setScoreA(dispData.getScoreB());
           dispData.setScoreB(nScoreACopy);
-  
-          
-          rgb_matrix::Color teamAColorCopy(teamAColor.r, teamAColor.g, teamAColor.b);
-          teamAColor.r = teamBColor.r;
-          teamAColor.g = teamBColor.g;
-          teamAColor.b = teamBColor.b;            
-          teamBColor.r = teamAColorCopy.r;
-          teamBColor.g = teamAColorCopy.g;
-          teamBColor.b = teamAColorCopy.b;
+           
+          rgb_matrix::Color* pTeamAColorCopy = pTeamAColor;          
+          pTeamAColor = pTeamBColor;
+          pTeamBColor = pTeamAColorCopy;
           
           bUpdateDisplay = true;
         }     
@@ -392,6 +398,16 @@ void KeyboardInput(DisplayData& dispData)
           nResetCnt = 0;
         }      
         break; 
+        
+      // Change team colors
+      case '5':
+        dispData.nextColorIndexA();
+        bUpdateDisplay = true;
+        break;
+      case '6':
+        dispData.nextColorIndexB();
+        bUpdateDisplay = true;
+        break;
       default: 
         sBuf.push_back(nInput);  
         if(sBuf.size() > 5)
@@ -401,11 +417,18 @@ void KeyboardInput(DisplayData& dispData)
         if(rfind_str(sBuf, sIncScoreA))       dispData.incScoreA();
         else if(rfind_str(sBuf, sDecScoreA))  dispData.decScoreA();    
         else if(rfind_str(sBuf, sIncScoreB))  dispData.incScoreB();
-        else if(rfind_str(sBuf, sDecScoreB))  dispData.decScoreB();
-       // else if(rfind_str(sBuf, sStart)){
-       //   dispData.start_pause(); 
-       // }
-          
+        else if(rfind_str(sBuf, sDecScoreB))  dispData.decScoreB();   
+        
+        else if(rfind_str(sBuf, sColorChangeA)){
+          dispData.nextColorIndexA();
+          bUpdateDisplay = true;
+        }
+        else if(rfind_str(sBuf, sColorChangeB)){
+          dispData.nextColorIndexB();
+          bUpdateDisplay = true;
+        }
+
+
         break;   
     }
    // printw("%2d %02d:%02d %2d\r", dispData.getScoreA(), dispData.getMin(), dispData.getSec(), dispData.getScoreB());          
