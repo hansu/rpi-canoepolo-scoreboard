@@ -9,15 +9,24 @@
 
 #include "canvas.h"
 
-#include <stdint.h>
-#include <stddef.h>
-
 #include <map>
+#include <stdint.h>
 
 namespace rgb_matrix {
-struct Color {
+class Color {
+public:
   Color() : r(0), g(0), b(0) {}
   Color(uint8_t rr, uint8_t gg, uint8_t bb) : r(rr), g(gg), b(bb) {}
+  Color(const Color& color_b) : r(color_b.r), g(color_b.g), b(color_b.b) {} 
+  
+  // Copy colors
+  Color& operator=(const Color& color_b){
+    r = color_b.r;
+    g = color_b.g;
+    b = color_b.b;
+    return *this;
+  } 
+
   uint8_t r;
   uint8_t g;
   uint8_t b;
@@ -81,30 +90,6 @@ private:
 };
 
 // -- Some utility functions.
-
-// Utility function: set an image from the given buffer containting pixels.
-//
-// Draw image of size "image_width" and "image_height" from pixel at
-// canvas-offset "canvas_offset_x", "canvas_offset_y". Image will be shown
-// cropped on the edges if needed.
-//
-// The canvas offset can be negative, i.e. the image start can be shifted
-// outside the image frame on the left/top edge.
-//
-// The buffer needs to be organized as rows with columns of three bytes
-// organized as rgb or bgr. Thus the size of the buffer needs to be exactly
-// (3 * image_width * image_height) bytes.
-//
-// The "image_buffer" parameters contains the data, "buffer_size_bytes" the
-// size in bytes.
-//
-// If "is_bgr" is true, the buffer is treated as BGR pixel arrangement instead
-// of RGB.
-// Returns 'true' if image was shown within canvas.
-bool SetImage(Canvas *c, int canvas_offset_x, int canvas_offset_y,
-              const uint8_t *image_buffer, size_t buffer_size_bytes,
-              int image_width, int image_height,
-              bool is_bgr);
 
 // Draw text, a standard NUL terminated C-string encoded in UTF-8,
 // with given "font" at "x","y" with "color".
