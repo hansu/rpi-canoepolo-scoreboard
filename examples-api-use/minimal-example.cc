@@ -68,6 +68,8 @@ public:
   int getMin()  { return m_nPlayTimeSec/60; }
 
   int getSec()  { return m_nPlayTimeSec%60; }
+  
+  int getTime()  { return m_nPlayTimeSec; }
 
   void setTime(int nSec)
   {
@@ -144,19 +146,34 @@ public:
   }
   
   colors_t getColorIndexA(void){ return m_teamAColorIndex; }    
-  
+    
   colors_t getColorIndexB(void){ return m_teamBColorIndex; }
+
+  void swapTeamColors(void){ 
+    colors_t tmp = m_teamAColorIndex; 
+    m_teamAColorIndex = m_teamBColorIndex; 
+    m_teamBColorIndex = tmp;
+  }       
+
+  void resetColors(void){
+    m_teamAColorIndex = white;
+    m_teamBColorIndex = white;
+  }
   
   void nextColorIndexA(void){    
-    m_teamAColorIndex = (colors_t)((int)m_teamAColorIndex+1);    
-    if(m_teamAColorIndex >= NUM_COLORS)
-      m_teamAColorIndex = (colors_t)0;
+    if (m_state != running){
+      m_teamAColorIndex = (colors_t)((int)m_teamAColorIndex+1);    
+      if(m_teamAColorIndex >= NUM_COLORS)
+        m_teamAColorIndex = (colors_t)0;
+    }
   }
    
   void nextColorIndexB(void){    
-    m_teamBColorIndex = (colors_t)((int)m_teamBColorIndex+1);    
-    if(m_teamBColorIndex >= NUM_COLORS)
-      m_teamBColorIndex = (colors_t)0;
+    if (m_state != running){
+      m_teamBColorIndex = (colors_t)((int)m_teamBColorIndex+1);    
+      if(m_teamBColorIndex >= NUM_COLORS)
+        m_teamBColorIndex = (colors_t)0;
+    }
   }         
 private:
   int m_nScoreA, m_nScoreB, m_nPlayTimeSec;
@@ -205,12 +222,15 @@ rgb_matrix::Color* GetPColor(colors_t nColorIndex){
 }
 
 
-
+using namespace std;
 
 int main(int argc, char *argv[]) {
 
   rgb_matrix::RuntimeOptions runtime;  
   runtime.gpio_slowdown = 4;
+  
+  freopen( "output.txt", "w", stdout );
+  cout << "key logging" << endl;
   
   RGBMatrix::Options options;
   options.hardware_mapping = "regular";  // or e.g. "adafruit-hat"
@@ -305,12 +325,12 @@ int main(int argc, char *argv[]) {
           rgb_matrix::DrawText(canvas, font_narr, 128, 32, *GetPColor(dispData.getColorIndexB()), &bg_color, sScoreB, letter_spacing);
       }    
       
-//      Für Stromaufnahme-Test      
-//      canvas->Clear();
-//      for(int i=0; i<16; i++){
-//       rgb_matrix::DrawLine(canvas, 0, i, 768, i, outline_color);
-//      }
-      
+      #ifdef CURRENT_TEST 
+      canvas->Clear();
+      for(int i=0; i<32; i++){
+       rgb_matrix::DrawLine(canvas, 0, i, 768, i, outline_color);
+      }
+      #endif      
       bUpdateDisplay = false;
     }
     if(bExit)
@@ -331,8 +351,27 @@ int main(int argc, char *argv[]) {
  * Return true if str2 found at the end of str1 
  */
 bool rfind_str(std::string &str1, std::string str2){
-  return (str1.substr(str1.size()-str2.size(), str2.size()) == str2);
+  if(str1.size()>=str2.size())
+    return (str1.substr(str1.size()-str2.size(), str2.size()) == str2);
+  else
+    return false;
+    
 }
+
+
+/*
+ * Find string in vector<string>
+ * If first char if str1 is not ESC then it compares to the second element of vec
+ */
+bool find_seq(std::string &str1, std::vector<std::string> vec){
+  if(rfind_str(str1, vec[0]))
+    return true;
+  else if(rfind_str(str1, vec[1]) && str1[str1.length()-3] != '\e')
+    return true;
+  return false;
+}
+
+
 
 void KeyboardInput(DisplayData& dispData)
 {
@@ -340,22 +379,19 @@ void KeyboardInput(DisplayData& dispData)
   static int nResetCnt=0, nShutdownCnt=0;
   static std::string sBuf = "    ";
 
-  const std::string sIncScoreA =    {"\e[A"};  // up
-  const std::string sDecScoreA =    {"\e[B"};  // down  
-  const std::string sIncScoreB =    {"\e[5~"}; // pg up
-  const std::string sDecScoreB =    {"\e[6~"}; // pg down
-  const std::string sColorChangeA = {"\e[G"};  // keypad 5
-  const std::string sColorChangeB = {"\e[C"};  // right
+  const std::vector<std::string> incScoreA =    {"\e[A", "8"};  // up
+  const std::vector<std::string> decScoreA =    {"\e[B", "2"};  // down  
+  const std::vector<std::string> incScoreB =    {"\e[5~", "9"}; // pg up
+  const std::vector<std::string> decScoreB =    {"\e[6~", "3"}; // pg down
+  const std::vector<std::string> colorChangeA = {"\e[G", "5"};  // keypad 5, 5
+  const std::vector<std::string> colorChangeB = {"\e[C", "6"};  // right, 6
 
    
   while(1){
     // Check input
     nInput = getch();
+    cout << nInput << "-------" << endl;
     switch(nInput){
-      case '8': dispData.incScoreA(); break;
-      case '2': dispData.decScoreA(); break;            
-      case '9': dispData.incScoreB(); break;
-      case '3': dispData.decScoreB(); break;
       case 'r': 
         nShutdownCnt++;
         if(nShutdownCnt > 150)
@@ -368,23 +404,18 @@ void KeyboardInput(DisplayData& dispData)
         break;       
       // Swap fields/teams
       case '*':         
-        if (dispData.getState() == idle)
+        if (dispData.getState() == idle || dispData.getTime() == 0)
         {
           dispData.setTime(600); 
           int nScoreACopy = dispData.getScoreA();
           dispData.setScoreA(dispData.getScoreB());
-          dispData.setScoreB(nScoreACopy);
-           
-          rgb_matrix::Color* pTeamAColorCopy = pTeamAColor;          
-          pTeamAColor = pTeamBColor;
-          pTeamBColor = pTeamAColorCopy;
-          
+          dispData.setScoreB(nScoreACopy);          
+          dispData.swapTeamColors();          
           bUpdateDisplay = true;
         }     
         break;
       // Start/pause
       case 10: // return
-     // case '0': 
         dispData.start_pause();    
         break;      
       case '+':
@@ -399,45 +430,42 @@ void KeyboardInput(DisplayData& dispData)
       // Stop
       case '/':
         dispData.stopTimer();
+        dispData.setState(idle);
         nResetCnt++;
         if(nResetCnt > 40) // 2 seconds
         {
           dispData.resetScore();
           dispData.stopTimer();
           dispData.setTime(600);
+          dispData.resetColors();
           nResetCnt = 0;
         }      
         break; 
         
-      // Change team colors
-      case '5':
-        dispData.nextColorIndexA();
-        bUpdateDisplay = true;
-        break;
-      case '6':
-        dispData.nextColorIndexB();
-        bUpdateDisplay = true;
-        break;
       default: 
         sBuf.push_back(nInput);  
-        if(sBuf.size() > 5)
+        if(sBuf.size() > 4)
           sBuf.erase(0, 1);
-          
-         // alternative input when numlock is activated 
-        if(rfind_str(sBuf, sIncScoreA))       dispData.incScoreA();
-        else if(rfind_str(sBuf, sDecScoreA))  dispData.decScoreA();    
-        else if(rfind_str(sBuf, sIncScoreB))  dispData.incScoreB();
-        else if(rfind_str(sBuf, sDecScoreB))  dispData.decScoreB();   
         
-        else if(rfind_str(sBuf, sColorChangeA)){
-          dispData.nextColorIndexA();
-          bUpdateDisplay = true;
+        bUpdateDisplay = true;
+        // Keys with two functions          
+        if(find_seq(sBuf, incScoreA))       dispData.incScoreA();
+        else if(find_seq(sBuf, decScoreA))  dispData.decScoreA();    
+        else if(find_seq(sBuf, incScoreB))  dispData.incScoreB();
+        else if(find_seq(sBuf, decScoreB))  dispData.decScoreB();   
+        
+        else if(find_seq(sBuf, colorChangeA)){
+          dispData.nextColorIndexA();          
         }
-        else if(rfind_str(sBuf, sColorChangeB)){
-          dispData.nextColorIndexB();
-          bUpdateDisplay = true;
-        }
-
+        else if(find_seq(sBuf, colorChangeB)){
+          dispData.nextColorIndexB();          
+        } 
+        else
+          bUpdateDisplay = false;
+        
+        // Clear buffer after valid sequence/char
+        if(bUpdateDisplay)
+          sBuf.clear(); // = "    ";
 
         break;   
     }
