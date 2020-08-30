@@ -16,7 +16,7 @@
 #include <string.h>
 #include <curses.h>
 #include <thread>
-#include "mytimer.h"
+//#include "mytimer.h"
 #include <time.h>
 #include <iostream>
 #include <string>
@@ -196,9 +196,9 @@ volatile bool bExit = false;
 
 rgb_matrix::Color color_red(255, 0, 0);
 rgb_matrix::Color color_yellow(250, 190, 0);
-rgb_matrix::Color color_blue(0, 30, 220);
+rgb_matrix::Color color_blue(0, 50, 255);
 rgb_matrix::Color color_green(0, 200, 0);
-rgb_matrix::Color color_white(175, 175, 175);
+rgb_matrix::Color color_white(200, 200, 200);
 rgb_matrix::Color color_orange(250, 130, 0);
 rgb_matrix::Color color_violet(220, 0, 220);
 
@@ -229,9 +229,10 @@ int main(int argc, char *argv[]) {
   rgb_matrix::RuntimeOptions runtime;  
   runtime.gpio_slowdown = 4;
   
+#ifdef DEBUG
   freopen( "output.txt", "w", stdout );
   cout << "key logging" << endl;
-  
+#endif
   RGBMatrix::Options options;
   options.hardware_mapping = "regular";  // or e.g. "adafruit-hat"
   options.rows = 16;
@@ -376,21 +377,26 @@ bool find_seq(std::string &str1, std::vector<std::string> vec){
 void KeyboardInput(DisplayData& dispData)
 {
   char nInput;
-  static int nResetCnt=0, nShutdownCnt=0;
+  static int nResetCnt=0, nShutdownCnt=0, nDispSwitchCnt=0;
   static std::string sBuf = "    ";
 
-  const std::vector<std::string> incScoreA =    {"\e[A", "8"};  // up
-  const std::vector<std::string> decScoreA =    {"\e[B", "2"};  // down  
-  const std::vector<std::string> incScoreB =    {"\e[5~", "9"}; // pg up
-  const std::vector<std::string> decScoreB =    {"\e[6~", "3"}; // pg down
-  const std::vector<std::string> colorChangeA = {"\e[G", "5"};  // keypad 5, 5
-  const std::vector<std::string> colorChangeB = {"\e[C", "6"};  // right, 6
+  const std::vector<std::string> colorChangeA = {"\e[A", "8"};  // up
+  const std::vector<std::string> decScoreA =    {"\e[G", "5"};  // keypad 5, 5
+  const std::vector<std::string> incScoreA =    {"\e[B", "2"};  // down  
+  
+  const std::vector<std::string> colorChangeB = {"\e[5~", "9"}; // pg up
+  const std::vector<std::string> decScoreB =    {"\e[C", "6"};  // right, 6
+  const std::vector<std::string> incScoreB =    {"\e[6~", "3"}; // pg down
+
+
 
    
   while(1){
     // Check input
     nInput = getch();
+#ifdef DEBUG
     cout << nInput << "-------" << endl;
+#endif
     switch(nInput){
       case 'r': 
         nShutdownCnt++;
@@ -400,7 +406,11 @@ void KeyboardInput(DisplayData& dispData)
           system("sudo shutdown now");
         }  
         break;
-      case 127: // backspace     
+      case 127: // backspace      (delete = 8 /'\b')?
+        nDispSwitchCnt++;
+        if(nDispSwitchCnt > 40) // 2 seconds
+        {
+        }      
         break;       
       // Swap fields/teams
       case '*':         
