@@ -1,9 +1,21 @@
-// -*- mode: c++; c-basic-offset: 2; indent-tabs-mode: nil; -*-
-// Small example how to use the library.
-// For more examples, look at demo-main.cc
-//
-// This code is public domain
-// (but note, that the led-matrix library this depends on is GPL v2)
+/*
+  Shotclock extension for Canoepolo Scoreboard
+
+  Runs on a 48x32 pixel LED-matrix. (Three 16x32 modules in Z-alignment).
+
+  Copyright 2021 Hans Unzner (hansunzner@gmail.com)
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+ */
+
 
 #include "led-matrix.h"
 #include "graphics.h"
@@ -15,18 +27,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <thread>
-#include <time.h>
 #include <iostream>
 #include <string>
+#include "DisplayData.hh"
+
 
 using rgb_matrix::RGBMatrix;
 using rgb_matrix::Canvas;
-
-volatile bool bUpdateDisplay = true;
-typedef enum states { idle, running, paused } states_t;
-typedef enum colors { white, yellow, red, blue, green, orange, violet } colors_t;
-#define NUM_COLORS 5
-
 
 volatile bool interrupt_received = false;
 static void InterruptHandler(int signo) {
@@ -43,23 +50,6 @@ rgb_matrix::Color color_blue(0, 50, 255);
 rgb_matrix::Color color_green(0, 200, 0);
 rgb_matrix::Color color_white(200, 200, 200);
 rgb_matrix::Color color_orange(250, 130, 0);
-rgb_matrix::Color color_violet(220, 0, 220);
-
-
-
-rgb_matrix::Color* GetPColor(colors_t nColorIndex){
-  switch(nColorIndex){
-    case red:    return &color_red;
-    case yellow: return &color_yellow;
-    case blue:   return &color_blue;
-    case green:  return &color_green;
-    case orange: return &color_orange;
-    case violet: return &color_violet;
-    case white:
-    default:
-                 return &color_white;
-    }
-}
 
 
 using namespace std;
@@ -114,7 +104,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Couldn't load std font '%s'\n", "../fonts2/LiberationSansNarrow_bb32.bdf");
 
     if (!font_std.LoadFont("Scoreboard/fonts2/LiberationSansNarrow_bb32.bdf")) {
-        fprintf(stderr, "Couldn't load std font '%s'\n", "../fonts2/LiberationSansNarrow_bb32.bdf");
+        fprintf(stderr, "Couldn't load std font '%s'\n", "Scoreboard/fonts2/LiberationSansNarrow_bb32.bdf");
         return 1;
     }
   }
@@ -125,12 +115,12 @@ int main(int argc, char *argv[]) {
 
   while(1){
 
-    if(bUpdateDisplay){
+    if(1){
 
       canvas->Clear();
 
       sprintf(disp_time_str, "%02d ", disp_time);
-      rgb_matrix::DrawText(canvas, font_std, 3, 32, *GetPColor(white), &bg_color, disp_time_str, letter_spacing);
+      rgb_matrix::DrawText(canvas, font_std, 3, 32, color_white, &bg_color, disp_time_str, letter_spacing);
 
       #ifdef CURRENT_TEST
       canvas->Clear();

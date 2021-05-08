@@ -1,9 +1,21 @@
-// -*- mode: c++; c-basic-offset: 2; indent-tabs-mode: nil; -*-
-// Small example how to use the library.
-// For more examples, look at demo-main.cc
-//
-// This code is public domain
-// (but note, that the led-matrix library this depends on is GPL v2)
+/*
+  Canoepolo Scoreboard
+
+  Runs on a 160x32 pixel LED-matrix. (Two rows of each five 16x32 modules).
+
+  Copyright 2021 Hans Unzner (hansunzner@gmail.com)
+
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+ */
+
 
 #include "led-matrix.h"
 #include "graphics.h"
@@ -15,176 +27,23 @@
 #include <stdlib.h>
 #include <string.h>
 #include <thread>
-#include <time.h>
 #include <iostream>
 #include <string>
+#include "DisplayData.hh"
 
-#ifdef USE_NCURSES
+/* Set this define if ncurses lib is not available.
+It is used for direct action on keyboard input without the need to press return */
+#define NO_NCURSES
+
+#ifndef NO_NCURSES
 #include <curses.h>
 #endif
 
 using rgb_matrix::RGBMatrix;
 using rgb_matrix::Canvas;
 
-volatile bool bUpdateDisplay = true;
 char sScoreA[24], sScoreB[24], sTime[24];
-typedef enum states { idle, running, paused } states_t;
-typedef enum colors { white, yellow, red, blue, green, orange, violet } colors_t;
-#define NUM_COLORS 5
 
-class DisplayData
-{
-public:
-  DisplayData() : m_nScoreA(0), m_nScoreB(0), m_nPlayTimeSec(600), m_teamAColorIndex(white), m_teamBColorIndex(white), m_bTimerStarted(false), m_state(idle)  { }
-
-  int getScoreA()  { return m_nScoreA; }
-
-  int getScoreB()  { return m_nScoreB; }
-
-  void setScoreA(int score)  { m_nScoreA = score; }
-
-  void setScoreB(int score)  { m_nScoreB = score; }
-
-  void incScoreA()  { m_nScoreA++; }
-
-  void incScoreB()  { m_nScoreB++; }
-
-  void decScoreA()  {
-    if(m_nScoreA > 0)
-      m_nScoreA--;
-  }
-
-  void decScoreB()
-  {
-    if(m_nScoreB > 0)
-      m_nScoreB--;
-  }
-
-  void resetScore()
-  {
-    m_nScoreA = 0;
-    m_nScoreB = 0;
-  }
-
-  int getMin()  { return m_nPlayTimeSec/60; }
-
-  int getSec()  { return m_nPlayTimeSec%60; }
-
-  int getTime()  { return m_nPlayTimeSec; }
-
-  void setTime(int nSec)
-  {
-    if(!m_bTimerStarted)
-      m_nPlayTimeSec = nSec;
-  }
-
-  void setTime(int nMin, int nSec)
-  {
-    if(!m_bTimerStarted)
-      m_nPlayTimeSec = nMin*60 + nSec;
-  }
-
-  void decTime()  { m_nPlayTimeSec--; }
-
-  void modifyTime(int nValue)
-  {
-    if(m_state != running){
-      m_nPlayTimeSec += nValue;
-
-      // only for testing to be ableto select 5 seconds
-      if(m_nPlayTimeSec == -57)
-        m_nPlayTimeSec = 0;
-      else if(m_nPlayTimeSec == -60)
-        m_nPlayTimeSec = 0;
-      else if(m_nPlayTimeSec <= 0)
-        m_nPlayTimeSec = 3;
-    }
-  }
-
-  void startTimer()
-  {
-    m_nStartTime = time(NULL);  // get current time
-    m_nSeconds = 0;
-    m_bTimerStarted = true;
-  }
-
-  void stopTimer()  { m_bTimerStarted = false; }
-
-  void updateTime()
-  {
-    if(m_bTimerStarted)
-    {
-      m_nSecondsLast = m_nSeconds;
-      m_nSeconds = (int)difftime(time(NULL), m_nStartTime);
-      if(m_nSecondsLast != m_nSeconds)
-      {
-        m_nPlayTimeSec -= (m_nSeconds - m_nSecondsLast);
-        if(m_nPlayTimeSec <= 0)
-        {
-          m_nPlayTimeSec = 0;
-          m_bTimerStarted = false;
-          m_state = idle;
-        }
-        bUpdateDisplay = true;
-      }
-    }
-  }
-  void setState(states_t state)  { m_state = state; }
-
-  states_t getState(void)
-  {
-    return m_state;
-  }
-
-  void start_pause(){
-    if(m_state == running){
-      stopTimer();
-      setState(paused);
-    } else {
-      startTimer();
-      setState(running);
-    }
-  }
-
-  colors_t getColorIndexA(void){ return m_teamAColorIndex; }
-
-  colors_t getColorIndexB(void){ return m_teamBColorIndex; }
-
-  void swapTeamColors(void){
-    colors_t tmp = m_teamAColorIndex;
-    m_teamAColorIndex = m_teamBColorIndex;
-    m_teamBColorIndex = tmp;
-  }
-
-  void resetColors(void){
-    m_teamAColorIndex = white;
-    m_teamBColorIndex = white;
-  }
-
-  void nextColorIndexA(void){
-    if (m_state != running){
-      m_teamAColorIndex = (colors_t)((int)m_teamAColorIndex+1);
-      if(m_teamAColorIndex >= NUM_COLORS)
-        m_teamAColorIndex = (colors_t)0;
-    }
-  }
-
-  void nextColorIndexB(void){
-    if (m_state != running){
-      m_teamBColorIndex = (colors_t)((int)m_teamBColorIndex+1);
-      if(m_teamBColorIndex >= NUM_COLORS)
-        m_teamBColorIndex = (colors_t)0;
-    }
-  }
-private:
-  int m_nScoreA, m_nScoreB, m_nPlayTimeSec;
-  colors_t m_teamAColorIndex, m_teamBColorIndex;
-  time_t m_nStartTime;
-  int m_nSeconds, m_nSecondsLast;
-  bool m_bTimerStarted;
-  states_t m_state;
-
-};
 
 volatile bool interrupt_received = false;
 static void InterruptHandler(int signo) {
@@ -248,7 +107,7 @@ int main(int argc, char *argv[]) {
   options.inverse_colors = false;
   options.led_rgb_sequence = "RGB";
 
-#ifdef USE_NCURSES
+#ifndef NO_NCURSES
   // initializing curses lib
   initscr();
   noecho();
@@ -274,14 +133,17 @@ int main(int argc, char *argv[]) {
    * Load bdf bitmap fonts.
    */
   rgb_matrix::Font font_std, font_narr;
-
   if (!font_std.LoadFont("../fonts2/LiberationSansNarrow_bb32.bdf")) {
-    fprintf(stderr, "Couldn't load std font '%s'\n", "../fonts2/LiberationSansNarrow_bb32.bdf");
-    return 1;
+	  if (!font_std.LoadFont("Scoreboard/fonts2/LiberationSansNarrow_bb32.bdf")) {
+		fprintf(stderr, "Couldn't load std font '%s'\n", "../fonts2/LiberationSansNarrow_bb32.bdf");
+		return 1;
+	  }
   }
   if (!font_narr.LoadFont("../fonts2/antonio_b32.bdf")) {
-    fprintf(stderr, "Couldn't load narrow font '%s'\n", "../fonts2/antonio_b32.bdf");
-    return 1;
+	  if (!font_narr.LoadFont("Scoreboard/fonts2/antonio_b32.bdf")) {
+		fprintf(stderr, "Couldn't load narrow font '%s'\n", "../fonts2/antonio_b32.bdf");
+		return 1;
+	  }
   }
 
   pTimeColor = &color_red;;
@@ -295,7 +157,7 @@ int main(int argc, char *argv[]) {
   while(1){
     dispData.updateTime();
 
-    if(bUpdateDisplay){
+    if(dispData.NeedRefresh()){
 
       canvas->Clear();
 
@@ -335,7 +197,7 @@ int main(int argc, char *argv[]) {
        rgb_matrix::DrawLine(canvas, 0, i, 768, i, outline_color);
       }
       #endif
-      bUpdateDisplay = false;
+      dispData.SetRefresh(false);
     }
     if(bExit)
     {
@@ -343,7 +205,7 @@ int main(int argc, char *argv[]) {
     }
     usleep(200 * 1000);
   }
-#if USE_NCURSES
+#ifndef NO_NCURSES
   endwin();
 #endif
   canvas->Clear();
@@ -393,11 +255,9 @@ void KeyboardInput(DisplayData& dispData)
   const std::vector<std::string> incScoreB =    {"\e[6~", "3"}; // pg down
 
 
-
-
   while(1){
     // Check input
-#if USE_NCURSES
+#ifndef NO_NCURSES
     nInput = getch();
 #else
     nInput = getchar();
@@ -429,7 +289,7 @@ void KeyboardInput(DisplayData& dispData)
           dispData.setScoreA(dispData.getScoreB());
           dispData.setScoreB(nScoreACopy);
           dispData.swapTeamColors();
-          bUpdateDisplay = true;
+          dispData.SetRefresh(true);
         }
         break;
       // Start/pause
@@ -465,7 +325,7 @@ void KeyboardInput(DisplayData& dispData)
         if(sBuf.size() > 4)
           sBuf.erase(0, 1);
 
-        bUpdateDisplay = true;
+        dispData.SetRefresh(true);
         // Keys with two functions
         if(find_seq(sBuf, incScoreA))       dispData.incScoreA();
         else if(find_seq(sBuf, decScoreA))  dispData.decScoreA();
@@ -479,16 +339,16 @@ void KeyboardInput(DisplayData& dispData)
           dispData.nextColorIndexB();
         }
         else
-          bUpdateDisplay = false;
+        	dispData.SetRefresh(false);
 
         // Clear buffer after valid sequence/char
-        if(bUpdateDisplay)
+        if(dispData.NeedRefresh())
           sBuf.clear(); // = "    ";
 
         break;
     }
    // printw("%2d %02d:%02d %2d\r", dispData.getScoreA(), dispData.getMin(), dispData.getSec(), dispData.getScoreB());
-    bUpdateDisplay = true;
+    dispData.SetRefresh(true);
   }
 }
 
