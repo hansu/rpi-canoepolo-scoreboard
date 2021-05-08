@@ -22,6 +22,9 @@
 #include "led-matrix.h"
 #include "graphics.h"
 
+// Make sure C++ is in sync with C
+static_assert(sizeof(rgb_matrix::RGBMatrix::Options) == sizeof(RGBLedMatrixOptions), "C and C++ out of sync");
+static_assert(sizeof(rgb_matrix::RuntimeOptions) == sizeof(RGBLedRuntimeOptions), "C and C++ out of sync");
 
 // Our opaque dummy structs to communicate with the c-world
 struct RGBLedMatrix {};
@@ -52,12 +55,9 @@ static struct LedFont *from_font(rgb_matrix::Font *font) {
 
 
 static struct RGBLedMatrix *led_matrix_create_from_options_optional_edit(
-  struct RGBLedMatrixOptions *opts, int *argc, char ***argv,
-  bool remove_consumed_flags) {
+  struct RGBLedMatrixOptions *opts, struct RGBLedRuntimeOptions *rt_opts,
+  int *argc, char ***argv, bool remove_consumed_flags) {
   rgb_matrix::RuntimeOptions default_rt;
-  default_rt.drop_privileges = 0;  // Usually, this is on, but let user choose.
-  default_rt.daemon = 0;
-
   rgb_matrix::RGBMatrix::Options default_opts;
 
   if (opts) {
@@ -88,6 +88,16 @@ static struct RGBLedMatrix *led_matrix_create_from_options_optional_edit(
 #undef OPT_COPY_IF_SET
   }
 
+  if (rt_opts) {
+    // Same story as RGBMatrix::Options
+#define RT_OPT_COPY_IF_SET(o) if (rt_opts->o) default_rt.o = rt_opts->o
+    RT_OPT_COPY_IF_SET(gpio_slowdown);
+    RT_OPT_COPY_IF_SET(daemon);
+    RT_OPT_COPY_IF_SET(drop_privileges);
+    RT_OPT_COPY_IF_SET(do_gpio_init);
+#undef RT_OPT_COPY_IF_SET
+  }
+
   rgb_matrix::RGBMatrix::Options matrix_options = default_opts;
   rgb_matrix::RuntimeOptions runtime_opt = default_rt;
   if (argc != NULL && argv != NULL) {
@@ -99,7 +109,7 @@ static struct RGBLedMatrix *led_matrix_create_from_options_optional_edit(
   }
 
   if (opts) {
-#define ACTUAL_VALUE_BACK_TO_OPT(o) opts->o = default_opts.o
+#define ACTUAL_VALUE_BACK_TO_OPT(o) opts->o = matrix_options.o
     ACTUAL_VALUE_BACK_TO_OPT(hardware_mapping);
     ACTUAL_VALUE_BACK_TO_OPT(rows);
     ACTUAL_VALUE_BACK_TO_OPT(cols);
@@ -122,20 +132,35 @@ static struct RGBLedMatrix *led_matrix_create_from_options_optional_edit(
 #undef ACTUAL_VALUE_BACK_TO_OPT
   }
 
-  rgb_matrix::RGBMatrix *matrix = CreateMatrixFromOptions(matrix_options,
-                                                          runtime_opt);
+  if (rt_opts) {
+#define ACTUAL_VALUE_BACK_TO_RT_OPT(o) rt_opts->o = runtime_opt.o
+    ACTUAL_VALUE_BACK_TO_RT_OPT(gpio_slowdown);
+    ACTUAL_VALUE_BACK_TO_RT_OPT(daemon);
+    ACTUAL_VALUE_BACK_TO_RT_OPT(drop_privileges);
+    ACTUAL_VALUE_BACK_TO_RT_OPT(do_gpio_init);
+#undef ACTUAL_VALUE_BACK_TO_RT_OPT
+  }
+
+  rgb_matrix::RGBMatrix *matrix
+    = rgb_matrix::RGBMatrix::CreateFromOptions(matrix_options, runtime_opt);
   return from_matrix(matrix);
 }
 
 struct RGBLedMatrix *led_matrix_create_from_options(
   struct RGBLedMatrixOptions *opts, int *argc, char ***argv) {
-  return led_matrix_create_from_options_optional_edit(opts, argc, argv,
+  return led_matrix_create_from_options_optional_edit(opts, NULL, argc, argv,
                                                       true);
 }
 
 struct RGBLedMatrix *led_matrix_create_from_options_const_argv(
   struct RGBLedMatrixOptions *opts, int argc, char **argv) {
-  return led_matrix_create_from_options_optional_edit(opts, &argc, &argv,
+  return led_matrix_create_from_options_optional_edit(opts, NULL, &argc, &argv,
+                                                      false);
+}
+
+struct RGBLedMatrix *led_matrix_create_from_options_and_rt_options(
+  struct RGBLedMatrixOptions *opts, struct RGBLedRuntimeOptions * rt_opts) {
+  return led_matrix_create_from_options_optional_edit(opts, rt_opts, NULL, NULL,
                                                       false);
 }
 
@@ -217,10 +242,14 @@ int height_font(struct LedFont * font) {
   return to_font(font)->height();
 }
 
+struct LedFont *create_outline_font(struct LedFont * font) {
+  rgb_matrix::Font* outlineFont = to_font(font)->CreateOutlineFont();
+  return from_font(outlineFont);
+}
+
 void delete_font(struct LedFont *font) {
   delete to_font(font);
 }
-
 
 // -- Some utility functions.
 

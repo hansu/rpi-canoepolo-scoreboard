@@ -42,7 +42,6 @@
 #include <Magick++.h>
 #include <magick/image.h>
 
-using rgb_matrix::GPIO;
 using rgb_matrix::Canvas;
 using rgb_matrix::FrameCanvas;
 using rgb_matrix::RGBMatrix;
@@ -351,7 +350,7 @@ int main(int argc, char *argv[]) {
 
   // Prepare matrix
   runtime_opt.do_gpio_init = (stream_output == NULL);
-  RGBMatrix *matrix = CreateMatrixFromOptions(matrix_options, runtime_opt);
+  RGBMatrix *matrix = RGBMatrix::CreateFromOptions(matrix_options, runtime_opt);
   if (matrix == NULL)
     return 1;
 

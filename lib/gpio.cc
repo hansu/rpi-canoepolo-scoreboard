@@ -110,8 +110,8 @@
 #define PWM_BASE_TIME_NS 2
 
 // GPIO setup macros. Always use INP_GPIO(x) before using OUT_GPIO(x).
-#define INP_GPIO(g) *(s_GPIO_registers+((g)/10)) &= ~(7<<(((g)%10)*3))
-#define OUT_GPIO(g) *(s_GPIO_registers+((g)/10)) |=  (1<<(((g)%10)*3))
+#define INP_GPIO(g) *(s_GPIO_registers+((g)/10)) &= ~(7ull<<(((g)%10)*3))
+#define OUT_GPIO(g) *(s_GPIO_registers+((g)/10)) |=  (1ull<<(((g)%10)*3))
 
 #define GPIO_SET *(gpio+7)  // sets   bits which are 1 ignores bits which are 0
 #define GPIO_CLR *(gpio+10) // clears bits which are 1 ignores bits which are 0
@@ -125,23 +125,18 @@ static volatile uint32_t *s_PWM_registers = NULL;
 static volatile uint32_t *s_CLK_registers = NULL;
 
 namespace rgb_matrix {
-/*static*/ const uint32_t GPIO::kValidBits
-= ((1 <<  0) | (1 <<  1) | // RPi 1 - Revision 1 accessible
-   (1 <<  2) | (1 <<  3) | // RPi 1 - Revision 2 accessible
-   (1 <<  4) | (1 <<  7) | (1 << 8) | (1 <<  9) |
-   (1 << 10) | (1 << 11) | (1 << 14) | (1 << 15)| (1 <<17) | (1 << 18) |
-   (1 << 22) | (1 << 23) | (1 << 24) | (1 << 25)| (1 << 27) |
-   // support for A+/B+ and RPi2 with additional GPIO pins.
-   (1 <<  5) | (1 <<  6) | (1 << 12) | (1 << 13) | (1 << 16) |
-   (1 << 19) | (1 << 20) | (1 << 21) | (1 << 26)
-);
+#define GPIO_BIT(x) (1ull << x)
 
 GPIO::GPIO() : output_bits_(0), input_bits_(0), reserved_bits_(0),
-               slowdown_(1) {
+               slowdown_(1)
+#ifdef ENABLE_WIDE_GPIO_COMPUTE_MODULE
+             , uses_64_bit_(false)
+#endif
+{
 }
 
-uint32_t GPIO::InitOutputs(uint32_t outputs,
-                           bool adafruit_pwm_transition_hack_needed) {
+gpio_bits_t GPIO::InitOutputs(gpio_bits_t outputs,
+                              bool adafruit_pwm_transition_hack_needed) {
   if (s_GPIO_registers == NULL) {
     fprintf(stderr, "Attempt to init outputs but not yet Init()-ialized.\n");
     return 0;
@@ -162,13 +157,18 @@ uint32_t GPIO::InitOutputs(uint32_t outputs,
     // Even with PWM enabled, GPIO4 still can not be used, because it is
     // now connected to the GPIO18 and thus must stay an input.
     // So reserve this bit if it is not set in outputs.
-    reserved_bits_ = (1<<4) & ~outputs;
+    reserved_bits_ = GPIO_BIT(4) & ~outputs;
   }
 
-  outputs &= kValidBits;     // Sanitize: only bits on GPIO header allowed.
   outputs &= ~(output_bits_ | input_bits_ | reserved_bits_);
-  for (uint32_t b = 0; b <= 27; ++b) {
-    if (outputs & (1 << b)) {
+#ifdef ENABLE_WIDE_GPIO_COMPUTE_MODULE
+  const int kMaxAvailableBit = 45;
+  uses_64_bit_ |= (outputs >> 32) != 0;
+#else
+  const int kMaxAvailableBit = 31;
+#endif
+  for (int b = 0; b <= kMaxAvailableBit; ++b) {
+    if (outputs & GPIO_BIT(b)) {
       INP_GPIO(b);   // for writing, we first need to set as input.
       OUT_GPIO(b);
     }
@@ -177,16 +177,21 @@ uint32_t GPIO::InitOutputs(uint32_t outputs,
   return outputs;
 }
 
-uint32_t GPIO::RequestInputs(uint32_t inputs) {
+gpio_bits_t GPIO::RequestInputs(gpio_bits_t inputs) {
   if (s_GPIO_registers == NULL) {
     fprintf(stderr, "Attempt to init inputs but not yet Init()-ialized.\n");
     return 0;
   }
 
-  inputs &= kValidBits;     // Sanitize: only bits on GPIO header allowed.
   inputs &= ~(output_bits_ | input_bits_ | reserved_bits_);
-  for (uint32_t b = 0; b <= 27; ++b) {
-    if (inputs & (1 << b)) {
+#ifdef ENABLE_WIDE_GPIO_COMPUTE_MODULE
+  const int kMaxAvailableBit = 45;
+  uses_64_bit_ |= (inputs >> 32) != 0;
+#else
+  const int kMaxAvailableBit = 31;
+#endif
+  for (int b = 0; b <= kMaxAvailableBit; ++b) {
+    if (inputs & GPIO_BIT(b)) {
       INP_GPIO(b);
     }
   }
@@ -247,9 +252,10 @@ static RaspberryPiModel DetermineRaspberryModel() {
     return PI_MODEL_2;
 
   case 0x11: /* Pi 4 */
+  case 0x14: /* CM4 */
     return PI_MODEL_4;
 
-  default:  /* a bunch of versions represneting Pi 3 */
+  default:  /* a bunch of versions representing Pi 3 */
     return PI_MODEL_3;
   }
 }
@@ -338,9 +344,16 @@ bool GPIO::Init(int slowdown) {
   if (!mmap_all_bcm_registers_once())
     return false;
 
-  gpio_set_bits_ = s_GPIO_registers + (0x1C / sizeof(uint32_t));
-  gpio_clr_bits_ = s_GPIO_registers + (0x28 / sizeof(uint32_t));
-  gpio_read_bits_ = s_GPIO_registers + (0x34 / sizeof(uint32_t));
+  gpio_set_bits_low_ = s_GPIO_registers + (0x1C / sizeof(uint32_t));
+  gpio_clr_bits_low_ = s_GPIO_registers + (0x28 / sizeof(uint32_t));
+  gpio_read_bits_low_ = s_GPIO_registers + (0x34 / sizeof(uint32_t));
+
+#ifdef ENABLE_WIDE_GPIO_COMPUTE_MODULE
+  gpio_set_bits_high_ = s_GPIO_registers + (0x20 / sizeof(uint32_t));
+  gpio_clr_bits_high_ = s_GPIO_registers + (0x2C / sizeof(uint32_t));
+  gpio_read_bits_high_ = s_GPIO_registers + (0x38 / sizeof(uint32_t));
+#endif
+
   return true;
 }
 
@@ -363,7 +376,7 @@ public:
 // to get the timing, but not optimal.
 class TimerBasedPinPulser : public PinPulser {
 public:
-  TimerBasedPinPulser(GPIO *io, uint32_t bits,
+  TimerBasedPinPulser(GPIO *io, gpio_bits_t bits,
                       const std::vector<int> &nano_specs)
     : io_(io), bits_(bits), nano_specs_(nano_specs) {
     if (!s_Timer1Mhz) {
@@ -381,7 +394,7 @@ public:
 
 private:
   GPIO *const io_;
-  const uint32_t bits_;
+  const gpio_bits_t bits_;
   const std::vector<int> nano_specs_;
 };
 
@@ -411,7 +424,7 @@ static void (*busy_wait_impl)(long) = busy_wait_nanos_rpi_3;
 static void WriteTo(const char *filename, const char *str) {
   const int fd = open(filename, O_WRONLY);
   if (fd < 0) return;
-  write(fd, str, strlen(str));
+  (void) write(fd, str, strlen(str));  // Best effort. Ignore return value.
   close(fd);
 }
 
@@ -557,11 +570,11 @@ static void print_overshoot_histogram() {
 // It only works on GPIO-12 or 18 though.
 class HardwarePinPulser : public PinPulser {
 public:
-  static bool CanHandle(uint32_t gpio_mask) {
+  static bool CanHandle(gpio_bits_t gpio_mask) {
 #ifdef DISABLE_HARDWARE_PULSES
     return false;
 #else
-    const bool can_handle = gpio_mask == (1 << 18) || gpio_mask == (1 << 12);
+    const bool can_handle = gpio_mask==GPIO_BIT(18) || gpio_mask==GPIO_BIT(12);
     if (can_handle && (s_PWM_registers == NULL || s_CLK_registers == NULL)) {
       // Instead of silently not using the hardware pin pulser and falling back
       // to timing based loops, complain loudly and request the user to make
@@ -580,7 +593,7 @@ public:
 #endif
   }
 
-  HardwarePinPulser(uint32_t pins, const std::vector<int> &specs)
+  HardwarePinPulser(gpio_bits_t pins, const std::vector<int> &specs)
     : triggered_(false) {
     assert(CanHandle(pins));
     assert(s_CLK_registers && s_PWM_registers && s_Timer1Mhz);
@@ -611,10 +624,10 @@ public:
     // Get relevant registers
     fifo_ = s_PWM_registers + PWM_FIFO;
 
-    if (pins == (1<<18)) {
+    if (pins == GPIO_BIT(18)) {
       // set GPIO 18 to PWM0 mode (Alternative 5)
       SetGPIOMode(s_GPIO_registers, 18, 2);
-    } else if (pins == (1<<12)) {
+    } else if (pins == GPIO_BIT(12)) {
       // set GPIO 12 to PWM0 mode (Alternative 0)
       SetGPIOMode(s_GPIO_registers, 12, 4);
     } else {
@@ -748,7 +761,7 @@ private:
 } // end anonymous namespace
 
 // Public PinPulser factory
-PinPulser *PinPulser::Create(GPIO *io, uint32_t gpio_mask,
+PinPulser *PinPulser::Create(GPIO *io, gpio_bits_t gpio_mask,
                              bool allow_hardware_pulsing,
                              const std::vector<int> &nano_wait_spec) {
   if (!Timers::Init()) return NULL;
