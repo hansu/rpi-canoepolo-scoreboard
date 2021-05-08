@@ -1,7 +1,9 @@
-CFLAGS=-Wall -O3 -g -Wextra -Wno-unused-parameter
+CFLAGS=-Wall -O3 -g3 -ggdb -Wextra -Wno-unused-parameter
 CXXFLAGS=$(CFLAGS)
-OBJECTS=demo-main.o minimal-example.o c-example.o text-example.o scrolling-text-example.o clock.o ledcat.o input-example.o
-BINARIES=demo minimal-example c-example text-example scrolling-text-example clock ledcat input-example
+OBJECTS=demo-main.o minimal-example.o c-example.o text-example.o scrolling-text-example.o \
+ clock.o ledcat.o input-example.o pixel-mover.o shotclock.o scoreboard.o
+BINARIES=demo minimal-example c-example text-example scrolling-text-example clock ledcat \ 
+input-example  pixel-mover shotclock scoreboard
 
 # Where our library resides. You mostly only need to change the
 # RGB_LIB_DISTRIBUTION, this is where the library is checked out.
@@ -10,7 +12,7 @@ RGB_INCDIR=$(RGB_LIB_DISTRIBUTION)/include
 RGB_LIBDIR=$(RGB_LIB_DISTRIBUTION)/lib
 RGB_LIBRARY_NAME=rgbmatrix
 RGB_LIBRARY=$(RGB_LIBDIR)/lib$(RGB_LIBRARY_NAME).a
-LDFLAGS+=-L$(RGB_LIBDIR) -l$(RGB_LIBRARY_NAME) -lrt -lm -lpthread -lncurses 
+LDFLAGS+=-L$(RGB_LIBDIR) -l$(RGB_LIBRARY_NAME) -lrt -lm -lpthread 
 all : $(BINARIES)
 
 $(RGB_LIBRARY): FORCE
@@ -25,6 +27,11 @@ text-example: text-example.o
 scrolling-text-example : scrolling-text-example.o
 clock : clock.o
 ledcat : ledcat.o
+
+scoreboard : scoreboard.o 
+scoreboard2 : scoreboard.o -lncurses	
+shotclock : shotclock.o 
+
 
 # All the binaries that have the same name as the object file.q
 % : %.o $(RGB_LIBRARY)

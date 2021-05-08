@@ -6,9 +6,7 @@
 OBJECTS=gpio.o led-matrix.o options-initialize.o framebuffer.o \
         thread.o bdf-font.o graphics.o led-matrix-c.o hardware-mapping.o \
         pixel-mapper.o multiplex-mappers.o \
-        content-streamer.o \
-        deprecated-transformer.o \
-        mytimer.o
+        content-streamer.o 
 	
 TARGET=librgbmatrix
 
@@ -165,8 +163,8 @@ DEFINES+=$(USER_DEFINES)
 
 DEFINES+=-DDEFAULT_HARDWARE='"$(HARDWARE_DESC)"'
 INCDIR=../include
-CFLAGS=-Wall -O3 -g -fPIC $(DEFINES) -Wextra -Wno-unused-parameter
-CXXFLAGS=$(CFLAGS) -fno-exceptions
+CFLAGS=-W -Wall -Wextra -Wno-unused-parameter -O3 -g3 -ggdb -fPIC $(DEFINES)
+CXXFLAGS=$(CFLAGS) -fno-exceptions -std=c++11
 
 all : $(TARGET).a $(TARGET).so.1
 
