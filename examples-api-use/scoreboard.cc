@@ -129,20 +129,20 @@ int main(int argc, char *argv[]) {
   rgb_matrix::Color outline_color(255,255,255);
   int letter_spacing = 0;
 
-  /*
-   * Load bdf bitmap fonts.
-   */
+  // Load bdf bitmap fonts
   rgb_matrix::Font font_std, font_narr;
   if (!font_std.LoadFont("../fonts2/LiberationSansNarrow_bb32.bdf")) {
 	  if (!font_std.LoadFont("Scoreboard/fonts2/LiberationSansNarrow_bb32.bdf")) {
-		fprintf(stderr, "Couldn't load std font '%s'\n", "../fonts2/LiberationSansNarrow_bb32.bdf");
-		return 1;
+      fprintf(stderr, "Couldn't load std font '%s'\n", "../fonts2/LiberationSansNarrow_bb32.bdf");
+      fprintf(stderr, "Couldn't load std font '%s'\n", "Scoreboard/fonts2/LiberationSansNarrow_bb32.bdf");
+      return 1;
 	  }
   }
   if (!font_narr.LoadFont("../fonts2/antonio_b32.bdf")) {
 	  if (!font_narr.LoadFont("Scoreboard/fonts2/antonio_b32.bdf")) {
-		fprintf(stderr, "Couldn't load narrow font '%s'\n", "../fonts2/antonio_b32.bdf");
-		return 1;
+      fprintf(stderr, "Couldn't load narrow font '%s'\n", "../fonts2/antonio_b32.bdf");
+      fprintf(stderr, "Couldn't load narrow font '%s'\n", "Scoreboard/fonts2/antonio_b32.bdf");
+      return 1;
 	  }
   }
 
