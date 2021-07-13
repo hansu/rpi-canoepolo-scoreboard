@@ -107,7 +107,7 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  rgb_matrix::DrawText(canvas, font_std, 3, 32, color_white, &bg_color, u8"\u2212\u2212"); //--
+  rgb_matrix::DrawText(canvas, font_std, 3, 32, color_white, &bg_color, "--");
 
   // --- Socket ---
   int read_size;
