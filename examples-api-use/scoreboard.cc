@@ -30,12 +30,18 @@
 #include <iostream>
 #include <string>
 #include "DisplayData.hh"
+#include "socket.hh"
 
+//#define CROSS_COMPILING
+
+/* use this if using a cross compiler because it doesn't have ncurses lib included */
+#ifndef CROSS_COMPILING
 /* Set this define if ncurses lib is not available.
 It is used for direct action on keyboard input without the need to press return */
-#define NO_NCURSES
+#define USE_NCURSES
+#endif
 
-#ifndef NO_NCURSES
+#ifdef USE_NCURSES
 #include <curses.h>
 #endif
 
@@ -51,6 +57,7 @@ static void InterruptHandler(int signo) {
 }
 
 void KeyboardInput(DisplayData& dispData);
+void ShotclockCom (DisplayData& dispData);
 volatile bool bExit = false;
 
 
@@ -89,7 +96,7 @@ int main(int argc, char *argv[]) {
   rgb_matrix::RuntimeOptions runtime;
   runtime.gpio_slowdown = 4;
 
-#ifdef DEBUG
+#ifdef DEBUG_KEYS
   freopen( "output.txt", "w", stdout );
   cout << "key logging" << endl;
 #endif
@@ -107,7 +114,7 @@ int main(int argc, char *argv[]) {
   options.inverse_colors = false;
   options.led_rgb_sequence = "RGB";
 
-#ifndef NO_NCURSES
+#ifdef USE_NCURSES
   // initializing curses lib
   initscr();
   noecho();
@@ -152,7 +159,7 @@ int main(int argc, char *argv[]) {
 
   DisplayData dispData;
   std::thread inputThread(KeyboardInput, std::ref(dispData));
-
+  std::thread socketThread(ShotclockCom, std::ref(dispData));
 
   while(1){
     dispData.updateTime();
@@ -205,7 +212,7 @@ int main(int argc, char *argv[]) {
     }
     usleep(200 * 1000);
   }
-#ifndef NO_NCURSES
+#ifdef USE_NCURSES
   endwin();
 #endif
   canvas->Clear();
@@ -254,15 +261,17 @@ void KeyboardInput(DisplayData& dispData)
   const std::vector<std::string> decScoreB =    {"\e[C", "6"};  // right, 6
   const std::vector<std::string> incScoreB =    {"\e[6~", "3"}; // pg down
 
+  const std::vector<std::string> start_pause = {"\e[3~", ","}; // comma, del
+  const std::vector<std::string> resetShotclock = {"\e[2~", "0"}; // 0, ins
 
   while(1){
     // Check input
-#ifndef NO_NCURSES
+#ifdef USE_NCURSES
     nInput = getch();
 #else
     nInput = getchar();
 #endif
-#ifdef DEBUG
+#ifdef DEBUG_KEYS
     cout << nInput << "-------" << endl;
 #endif
     switch(nInput){
@@ -293,9 +302,11 @@ void KeyboardInput(DisplayData& dispData)
         }
         break;
       // Start/pause
+#ifndef CROSS_COMPILING
       case 10: // return
         dispData.start_pause();
         break;
+#endif
       case '+':
         dispData.modifyTime(60);
         break;
@@ -338,6 +349,14 @@ void KeyboardInput(DisplayData& dispData)
         else if(find_seq(sBuf, colorChangeB)){
           dispData.nextColorIndexB();
         }
+        else if(find_seq(sBuf, resetShotclock)){
+          dispData.resetShotclock();
+        }
+#ifdef CROSS_COMPILING
+        else if(find_seq(sBuf, start_pause)){
+          dispData.start_pause();
+        }
+#endif
         else
         	dispData.SetRefresh(false);
 
@@ -352,3 +371,62 @@ void KeyboardInput(DisplayData& dispData)
   }
 }
 
+void ShotclockCom (DisplayData& dispData)
+{
+  Socket csocket(true);
+
+ //Create socket
+  while(1){
+    if(csocket.SocketCreate() == -1)
+    {
+      printf("Could not create socket\n");
+      sleep(5);
+    } else{
+      printf("Socket is created\n");
+      break;
+    }
+  }
+
+  //Bind
+  while(1){
+    if(csocket.BindCreatedSocket(9000) < 0)
+    {
+      printf("bind failed");
+      sleep(5);
+    } else {
+      printf("bind done\n");
+      break;
+    }
+  }
+
+  //Listen
+  csocket.Listen();
+  char tx_string[10];
+  int retVal;
+
+  while(1)
+  {
+      printf("Waiting for incoming connections...\n");
+      //Accept incoming connection
+      if (csocket.Accept() < 0)
+      {
+          perror("accept failed");
+          break;
+      }
+      printf("Connection accepted\n");
+
+      while(1){
+        //if(dispData.NeedShotclockRefresh()){
+        sprintf(tx_string, "%02d", dispData.getShotTimeout());
+        printf("send %s\n", tx_string);
+
+        if((retVal = csocket.SocketSend(std::string(tx_string))) < 0)
+        {
+          printf("send failed (error %d)\n", retVal);
+          break;
+        }
+        usleep(100000);
+      }
+  }
+
+}

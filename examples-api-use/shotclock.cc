@@ -121,44 +121,45 @@ int main(int argc, char *argv[]) {
     if(csocket.SocketCreate() == -1)
     {
       printf("Could not create socket\n");
-      return 1;
-    }
-    printf("Socket is created\n");
+    } else {
+      printf("Socket is created\n");
 
-    // Connect loop
-    while(1){
-      // Connect to remote server
-      if (csocket.SocketConnect("scoreboard", 9000) < 0) {
-          perror("connect failed");
-          sleep(2);
-          printf("try to reconnect... \n");
-      } else {
-          printf("Successfully connected to server\n");
+      // Connect loop
+      while(1){
+        // Connect to remote server
+        if (csocket.SocketConnect("scoreboard.local", 9000) < 0) {
+            perror("connect failed");
+            sleep(2);
+            printf("try to reconnect... \n");
+        } else {
+            printf("Successfully connected to server\n");
+            break;
+        }
+      }
+
+      // Receive loop
+      while(1){
+        // Receive data from the server
+        read_size = csocket.SocketReceive(response);
+        if(read_size == 0){
+          printf("Connection to server lost\n");
+          // this sending is required to not block the port
+          csocket.SocketSend("Connection lost, closing socket");
+          csocket.Close();
           break;
-      }
-    }
+        }
+        printf("send Ack\n");
+        if(csocket.SocketSend("Ack") < 0){
+          printf("Connection to server lost\n");
+          csocket.Close();
+          break;
+        }
+        canvas->Clear();
+        rgb_matrix::DrawText(canvas, font_std, 3, 32, color_white, &bg_color, response.c_str());
 
-    // Receive loop
-    while(1){
-      // Receive data from the server
-      read_size = csocket.SocketReceive(response);
-      if(read_size == 0){
-        printf("Connection to server lost\n");
-        // this sending is required to not block the port
-        csocket.SocketSend("Connection lost, closing socket");
-        csocket.Close();
-        break;
       }
-      printf("send Ack\n");
-      if(csocket.SocketSend("Ack") < 0){
-        printf("Connection to server lost\n");
-        csocket.Close();
-        break;
-      }
-
       canvas->Clear();
-      rgb_matrix::DrawText(canvas, font_std, 3, 32, color_white, &bg_color, response.c_str());
-
+      rgb_matrix::DrawText(canvas, font_std, 3, 32, color_white, &bg_color, "--");
     }
   }
 }

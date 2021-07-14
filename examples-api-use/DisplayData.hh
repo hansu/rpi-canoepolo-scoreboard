@@ -5,8 +5,8 @@
  *      Author: Hans Unzner
  */
 
-#ifndef EXAMPLES_API_USE_DISPLAYDATA_HH_
-#define EXAMPLES_API_USE_DISPLAYDATA_HH_
+#ifndef _DISPLAYDATA_HH_
+#define _DISPLAYDATA_HH_
 
 #include <unistd.h>
 #include <time.h>
@@ -19,9 +19,9 @@ typedef enum colors { white, yellow, red, blue, green, orange, violet } colors_t
 class DisplayData
 {
 public:
-  DisplayData() : m_nScoreA(0), m_nScoreB(0), m_nPlayTimeSec(600), m_teamAColorIndex(white), m_teamBColorIndex(white),
+  DisplayData() : m_nScoreA(0), m_nScoreB(0), m_nPlayTimeSec(600), m_nShotTimeout(60), m_teamAColorIndex(white), m_teamBColorIndex(white),
    m_nStartTime(0), m_nSeconds(0), m_nSecondsLast(0), m_bTimerStarted(false),
-  m_state(idle), m_bUpdateDisplay(true) { }
+  m_state(idle), m_shotclockState(idle), m_bUpdateDisplay(true), m_bUpdateShotclock(true) { }
 
   int getScoreA()  { return m_nScoreA; }
 
@@ -31,9 +31,17 @@ public:
 
   void setScoreB(int score)  { m_nScoreB = score; }
 
-  void incScoreA()  { m_nScoreA++; }
+  void incScoreA()  {
+    m_nScoreA++;
+    resetShotclock();
+    m_shotclockState = paused;
+  }
 
-  void incScoreB()  { m_nScoreB++; }
+  void incScoreB()  {
+    m_nScoreB++;
+    resetShotclock();
+    m_shotclockState = paused;
+  }
 
   void decScoreA()  {
     if(m_nScoreA > 0)
@@ -52,11 +60,19 @@ public:
     m_nScoreB = 0;
   }
 
+  void resetShotclock()
+  {
+    m_nShotTimeout = 60;
+    m_shotclockState = running;
+  }
+
   int getMin()  { return m_nPlayTimeSec/60; }
 
   int getSec()  { return m_nPlayTimeSec%60; }
 
   int getTime()  { return m_nPlayTimeSec; }
+
+  int getShotTimeout()  { return m_nShotTimeout; }
 
   void setTime(int nSec)
   {
@@ -92,6 +108,7 @@ public:
     m_nStartTime = time(NULL);  // get current time
     m_nSeconds = 0;
     m_bTimerStarted = true;
+    m_shotclockState = running;
   }
 
   void stopTimer()  { m_bTimerStarted = false; }
@@ -112,6 +129,14 @@ public:
           m_state = idle;
         }
         m_bUpdateDisplay = true;
+
+        if(m_shotclockState == running){
+          m_nShotTimeout -= (m_nSeconds - m_nSecondsLast);
+          if(m_nShotTimeout <= 0){
+            m_nShotTimeout = 0;
+          }
+          m_bUpdateShotclock = true;
+        }
       }
     }
   }
@@ -126,9 +151,11 @@ public:
     if(m_state == running){
       stopTimer();
       setState(paused);
+      m_shotclockState = paused;
     } else {
       startTimer();
       setState(running);
+      m_shotclockState = running;
     }
   }
 
@@ -167,21 +194,25 @@ public:
 	  return m_bUpdateDisplay;
   }
 
+  bool NeedShotclockRefresh(void){
+	  return m_bUpdateShotclock;
+  }
+
   void SetRefresh(bool val){
 	  m_bUpdateDisplay = val;
   }
 private:
-  int m_nScoreA, m_nScoreB, m_nPlayTimeSec;
+  int m_nScoreA, m_nScoreB, m_nPlayTimeSec, m_nShotTimeout;
   colors_t m_teamAColorIndex, m_teamBColorIndex;
   time_t m_nStartTime;
   int m_nSeconds, m_nSecondsLast;
   bool m_bTimerStarted;
-  states_t m_state;
-  bool m_bUpdateDisplay;
+  states_t m_state, m_shotclockState;
+  bool m_bUpdateDisplay, m_bUpdateShotclock;
 
 
 };
 
 
 
-#endif /* EXAMPLES_API_USE_DISPLAYDATA_HH_ */
+#endif /* _DISPLAYDATA_HH_ */
