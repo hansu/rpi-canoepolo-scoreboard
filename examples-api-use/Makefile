@@ -30,10 +30,10 @@ clock : clock.o
 ledcat : ledcat.o
 pixel-mover : pixel-mover.o
 
-scoreboard : scoreboard.o
-scoreboard2 : scoreboard.o -lncurses
-shotclock : shotclock.o
+scoreboard : scoreboard.o  $(RGB_LIBRARY)
+	$(CXX) $< -o $@ $(LDFLAGS) -lncurses
 
+shotclock : shotclock.o
 
 # All the binaries that have the same name as the object file.q
 % : %.o $(RGB_LIBRARY)
