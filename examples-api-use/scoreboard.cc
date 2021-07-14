@@ -70,8 +70,6 @@ rgb_matrix::Color color_orange(250, 130, 0);
 rgb_matrix::Color color_violet(220, 0, 220);
 
 rgb_matrix::Color* pTimeColor;
-rgb_matrix::Color* pTeamAColor;
-rgb_matrix::Color* pTeamBColor;
 
 
 rgb_matrix::Color* GetPColor(colors_t nColorIndex){
@@ -153,9 +151,7 @@ int main(int argc, char *argv[]) {
 	  }
   }
 
-  pTimeColor = &color_red;;
-  pTeamAColor = &color_white;
-  pTeamBColor = &color_white;
+  pTimeColor = &color_white;;
 
   DisplayData dispData;
   std::thread inputThread(KeyboardInput, std::ref(dispData));

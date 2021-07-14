@@ -19,7 +19,7 @@ typedef enum colors { white, yellow, red, blue, green, orange, violet } colors_t
 class DisplayData
 {
 public:
-  DisplayData() : m_nScoreA(0), m_nScoreB(0), m_nPlayTimeSec(600), m_nShotTimeout(60), m_teamAColorIndex(white), m_teamBColorIndex(white),
+  DisplayData() : m_nScoreA(0), m_nScoreB(0), m_nPlayTimeSec(600), m_nShotTimeout(60), m_teamAColorIndex(green), m_teamBColorIndex(red),
    m_nStartTime(0), m_nSeconds(0), m_nSecondsLast(0), m_bTimerStarted(false),
   m_state(idle), m_shotclockState(idle), m_bUpdateDisplay(true), m_bUpdateShotclock(true) { }
 
