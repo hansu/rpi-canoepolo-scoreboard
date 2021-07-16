@@ -321,6 +321,7 @@ void KeyboardInput(DisplayData& dispData)
           dispData.stopTimer();
           dispData.setTime(600);
           dispData.resetColors();
+          dispData.resetShotclock();
           nResetCnt = 0;
         }
         break;
@@ -452,7 +453,7 @@ void onmessage(int fd, const unsigned char *msg, uint64_t size, int type)
   free(cli);
 
 
-  if(strstr((const char*)msg,"get") != NULL){
+  if(strstr((const char*)msg,"update") != NULL){
     // do nothing, just send data
   } else {
     if(strstr((const char*)msg,"playPause") != NULL){
@@ -472,6 +473,7 @@ void onmessage(int fd, const unsigned char *msg, uint64_t size, int type)
       dispData.stopTimer();
       dispData.setTime(600);
       dispData.resetColors();
+      dispData.resetShotclock();
     } else if(strstr((const char*)msg,"switch") != NULL){
       dispData.swapTeams();
     } else if(strstr((const char*)msg,"colorLeft") != NULL){

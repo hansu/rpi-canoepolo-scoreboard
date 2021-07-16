@@ -181,8 +181,8 @@ public:
     }
   }
   void resetColors(void){
-    m_teamAColorIndex = white;
-    m_teamBColorIndex = white;
+    m_teamAColorIndex = green;
+    m_teamBColorIndex = red;
   }
 
   void nextColorIndexA(void){
