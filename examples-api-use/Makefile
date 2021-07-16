@@ -31,7 +31,7 @@ ledcat : ledcat.o
 pixel-mover : pixel-mover.o
 
 scoreboard : scoreboard.o  $(RGB_LIBRARY)
-	$(CXX) $< -o $@ $(LDFLAGS) -lncurses
+	$(CXX) $< -o $@ $(LDFLAGS) libws.a -lncurses
 
 shotclock : shotclock.o
 

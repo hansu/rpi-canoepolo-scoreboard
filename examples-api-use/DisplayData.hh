@@ -169,6 +169,17 @@ public:
     m_teamBColorIndex = tmp;
   }
 
+  void swapTeams(void){
+    if (m_state == idle || m_nPlayTimeSec == 0)
+    {
+      setTime(600);
+      int nScoreACopy = getScoreA();
+      setScoreA(getScoreB());
+      setScoreB(nScoreACopy);
+      swapTeamColors();
+      SetRefresh(true);
+    }
+  }
   void resetColors(void){
     m_teamAColorIndex = white;
     m_teamBColorIndex = white;

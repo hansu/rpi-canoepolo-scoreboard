@@ -31,6 +31,10 @@
 #include <string>
 #include "DisplayData.hh"
 #include "socket.hh"
+#include <sstream>
+extern "C"{
+#include "ws.h"
+}
 
 //#define CROSS_COMPILING
 
@@ -58,6 +62,7 @@ static void InterruptHandler(int signo) {
 
 void KeyboardInput(DisplayData& dispData);
 void ShotclockCom (DisplayData& dispData);
+void WsSocket (DisplayData& dispData);
 volatile bool bExit = false;
 
 
@@ -70,6 +75,7 @@ rgb_matrix::Color color_orange(250, 130, 0);
 rgb_matrix::Color color_violet(220, 0, 220);
 
 rgb_matrix::Color* pTimeColor;
+DisplayData dispData;
 
 
 rgb_matrix::Color* GetPColor(colors_t nColorIndex){
@@ -137,25 +143,25 @@ int main(int argc, char *argv[]) {
   // Load bdf bitmap fonts
   rgb_matrix::Font font_std, font_narr;
   if (!font_std.LoadFont("../fonts2/LiberationSansNarrow_bb32.bdf")) {
-	  if (!font_std.LoadFont("Scoreboard/fonts2/LiberationSansNarrow_bb32.bdf")) {
+    if (!font_std.LoadFont("Scoreboard/fonts2/LiberationSansNarrow_bb32.bdf")) {
       fprintf(stderr, "Couldn't load std font '%s'\n", "../fonts2/LiberationSansNarrow_bb32.bdf");
       fprintf(stderr, "Couldn't load std font '%s'\n", "Scoreboard/fonts2/LiberationSansNarrow_bb32.bdf");
       return 1;
-	  }
+    }
   }
   if (!font_narr.LoadFont("../fonts2/antonio_b32.bdf")) {
-	  if (!font_narr.LoadFont("Scoreboard/fonts2/antonio_b32.bdf")) {
+    if (!font_narr.LoadFont("Scoreboard/fonts2/antonio_b32.bdf")) {
       fprintf(stderr, "Couldn't load narrow font '%s'\n", "../fonts2/antonio_b32.bdf");
       fprintf(stderr, "Couldn't load narrow font '%s'\n", "Scoreboard/fonts2/antonio_b32.bdf");
       return 1;
-	  }
+    }
   }
 
   pTimeColor = &color_white;;
 
-  DisplayData dispData;
   std::thread inputThread(KeyboardInput, std::ref(dispData));
   std::thread socketThread(ShotclockCom, std::ref(dispData));
+  std::thread wsSocketThread(WsSocket, std::ref(dispData));
 
   while(1){
     dispData.updateTime();
@@ -287,15 +293,7 @@ void KeyboardInput(DisplayData& dispData)
         break;
       // Swap fields/teams
       case '*':
-        if (dispData.getState() == idle || dispData.getTime() == 0)
-        {
-          dispData.setTime(600);
-          int nScoreACopy = dispData.getScoreA();
-          dispData.setScoreA(dispData.getScoreB());
-          dispData.setScoreB(nScoreACopy);
-          dispData.swapTeamColors();
-          dispData.SetRefresh(true);
-        }
+        dispData.swapTeams();
         break;
       // Start/pause
 #ifndef CROSS_COMPILING
@@ -354,7 +352,7 @@ void KeyboardInput(DisplayData& dispData)
         }
 #endif
         else
-        	dispData.SetRefresh(false);
+          dispData.SetRefresh(false);
 
         // Clear buffer after valid sequence/char
         if(dispData.NeedRefresh())
@@ -424,5 +422,83 @@ void ShotclockCom (DisplayData& dispData)
         usleep(100000);
       }
   }
+
+}
+
+void onopen(int fd)
+{
+  char *cli;
+  cli = ws_getaddress(fd);
+  printf("Connection opened, client: %d | addr: %s\n", fd, cli);
+
+  free(cli);
+}
+
+void onclose(int fd)
+{
+  char *cli;
+  cli = ws_getaddress(fd);
+  printf("Connection closed, client: %d | addr: %s\n", fd, cli);
+  free(cli);
+}
+
+void onmessage(int fd, const unsigned char *msg, uint64_t size, int type)
+{
+  char *cli;
+  std::stringstream ssResponse;
+  cli = ws_getaddress(fd);
+  printf("Received message: %s (size: %" PRId64 ", type: %d), from: %s/%d  -->  ",
+    msg, size, type, cli, fd);
+  free(cli);
+
+
+  if(strstr((const char*)msg,"get") != NULL){
+    // do nothing, just send data
+  } else {
+    if(strstr((const char*)msg,"playPause") != NULL){
+      dispData.start_pause();
+    } else if(strstr((const char*)msg,"shotclockReset") != NULL){
+      dispData.resetShotclock();
+    } else if(strstr((const char*)msg,"scoreLeftPlus") != NULL){
+      dispData.incScoreA();
+    } else if(strstr((const char*)msg,"scoreRightPlus") != NULL){
+      dispData.incScoreB();
+    } else if(strstr((const char*)msg,"scoreLeftMinus") != NULL){
+      dispData.decScoreA();
+    } else if(strstr((const char*)msg,"scoreRightMinus") != NULL){
+      dispData.decScoreB();
+    } else if(strstr((const char*)msg,"reset") != NULL){
+      dispData.resetScore();
+      dispData.stopTimer();
+      dispData.setTime(600);
+      dispData.resetColors();
+    } else if(strstr((const char*)msg,"switch") != NULL){
+      dispData.swapTeams();
+    } else if(strstr((const char*)msg,"colorLeft") != NULL){
+      dispData.nextColorIndexA();
+    } else if(strstr((const char*)msg,"colorRight") != NULL){
+      dispData.nextColorIndexB();
+    } else if(strstr((const char*)msg,"timePlus") != NULL){
+      dispData.modifyTime(60);
+    } else if(strstr((const char*)msg,"timeMinus") != NULL){
+      dispData.modifyTime(-60);
+    }
+    dispData.SetRefresh(true);
+  }
+
+  // {"time" : [10, 0],"shotclock" : 60,"score" : [0, 0]};
+  ssResponse << "{\"time\" : [" << dispData.getMin() << "," << dispData.getSec() << "],\"shotclock\" : " << dispData.getShotTimeout() << ",\"score\" : [" << dispData.getScoreA()  << "," << dispData.getScoreB() << "]}";
+  std::cout << "send: " << ssResponse.str() << std::endl;
+  ws_sendframe(fd, ssResponse.str().c_str() , ssResponse.str().size(), true, type);
+}
+
+void WsSocket (DisplayData& dispData){
+
+  struct ws_events evs;
+  evs.onopen    = &onopen;
+  evs.onclose   = &onclose;
+  evs.onmessage = &onmessage;
+  ws_socket(&evs, 8080); /* Never returns. */
+
 
 }
