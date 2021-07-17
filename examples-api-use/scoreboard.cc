@@ -420,7 +420,7 @@ void ShotclockCom (DisplayData& dispData)
           printf("send failed (error %d)\n", retVal);
           break;
         }
-        usleep(100000);
+        usleep(250000);
       }
   }
 
