@@ -1,0 +1,35 @@
+#anzeige{
+    display: flex;
+    width:100%;
+    align-items:center;
+}
+.item{
+    flex-grow:1;
+    margin:10px;
+    text-align: center;
+    font-size:3em
+
+}
+#time{
+    flex-grow:2;
+
+}
+#playtime{
+    color:white;
+}
+#shotclock{
+   font-size: 1.5em;
+}
+p{display:inline;}
+
+body{font-family:Arial, Helvetica, sans-serif;
+background-color: black;
+color:red}
+.scorebutton{
+    font-size:1em
+
+}
+#scoreL, #scoreR{
+    color:yellow
+}
+#shotclock{color:green;}

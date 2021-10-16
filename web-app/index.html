@@ -1,0 +1,478 @@
+<!--
+Copyright (C) 2016-2020  Davidson Francis <davidsondfgl@gmail.com>
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>
+-->
+<!--Recv: {"time" : [10, 05],"shotclock" : 60,"score" : [1, 5],}-->
+
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <!-- <script src="a82b623f7d.js" crossorigin="anonymous"></script> -->
+</head>
+
+<body>
+    <!--    <div id="header">
+
+        <h1 align="left">wsServer</h1>
+        Server: <input type="text" id="txtServer" value="ws://localhost:8080">
+        <input type="button" id="btConn" name="btConn" value="Connect!"><br /><br />
+
+        Connection type:
+        <input type="radio" name="port" id="port1" checked="true" value="ws:// (8080)"
+            onclick="document.getElementById('txtServer').value='ws://localhost:8080'">
+        <label for="port1">ws:// (8080)</label>
+
+        <input type="radio" name="port" id="port2" value="wss:// (443)"
+            onclick="document.getElementById('txtServer').value='ws://localhost:443'">
+        <label for="port2">wss:// (443)</label>
+
+        <br /> <br />
+
+        Message: <input type="text" id="txtMsg" value="" placeholder="Type your message (ENTER to send)">
+        <input type="button" id="btMsg" name="btMsg" value="Send"><br /><br />
+
+        <textarea rows="10" cols="50" id="taLog" name="taLog"></textarea>
+    </div>
+-->
+    <div id="anzeige">
+        <div class="item"><button class="scorebutton" onClick="sendCmd('scoreLeftPlus')">
+                <img src="./caret-up-solid.svg" />
+                </i></button>
+            <div id="scoreL">-</div><button class="scorebutton" onClick="sendCmd('scoreLeftMinus')"> <img
+                    src="./caret-down-solid.svg" /></button>
+        </div>
+        <div id="time" class="item">
+            <div id="playtime">
+                <p id="minutes">00</p>:<p id="seconds">00</p>
+                <div class="timeBtnContainer">
+                    <button class="timeBtn" onClick="sendCmd('timePlus')"><img
+                        src="./plus-solid.svg" /></button>
+                    <button class="timeBtn" onClick="sendCmd('timeMinus')"><img
+                        src="./minus-solid.svg" /></button>
+                </div>
+            </div>
+            <div id="shotclock">
+                <div id="shotclockTime" class="inline">--</div>
+                <button class="inline shotclockReset" onClick="sendCmd('shotclockReset')"><img
+                    src="./undo-alt-solid.svg" /></button>
+            </div>
+        </div>
+        <div class="item"><button class=" scorebutton" onClick="sendCmd('scoreRightPlus')">                <img src="./caret-up-solid.svg" />
+</button>
+            <div id="scoreR">-</div><button class="scorebutton" onClick="sendCmd('scoreRightMinus')"><img
+                src="./caret-down-solid.svg" /></button>
+        </div>
+    </div>
+    <div class="center">
+        <button onClick="sendCmd('playPause')" id="startBtn"> 
+            <img src="./play-solid.svg" aria-hidden="true" style="width:12vmin" />
+          
+             <img
+            src="./pause-solid.svg" style="width:12vmin" />
+            
+        </button>
+    </div>
+    <div class="container" style="  justify-content: center;">
+
+        <!-- <button class="flexbutton" onClick="sendCmd('colorLeft')"><i class="fas fa-paint-brush"></i></button> -->
+
+        <button class="flexbutton" id="reset"><img
+            src="./undo-alt-solid.svg" />
+        </button>
+
+        <button class="flexbutton" onClick="sendCmd('switch')"><img
+            src="./exchange-alt-solid.svg" /></button>
+
+        <!-- <button class="flexbutton" onClick="sendCmd('colorRight')"><i class="fas fa-paint-brush"></i></button> -->
+
+    </div>
+
+
+    <!-- The Modal -->
+    <div id="myModal" class="modal">
+
+        <!-- Modal content -->
+        <div class="modal-content" style="background-color:#383838">
+            <span class="close">&times;</span>
+            <p style="text-align: center;
+            font-size: 20vmin;
+            color: white;
+            display:block;
+            margin:10vmin
+            ">Reset?</p>
+            <div class="container">
+                <button class="flexbutton" style="background:green; font-size:30vmin;width: 30vmin;
+                height: 30vmin;
+                "
+                    onclick="closeModal(); sendCmd('reset');"><img
+                    src="./check-solid.svg" /></button></i></button>
+                <button class="flexbutton" style="background:red; font-size: 30vmin;width: 30vmin;
+                height: 30vmin;
+                " onclick="closeModal()"><img
+                    src="./times-solid.svg" style="height: 30vmin"/></button></button>
+            </div>
+        </div>
+
+    </div>
+
+    <div style="position: absolute;
+    top: 10;
+    right: 10;
+    font-size: 7vmin;" id="connectionStatus">not connected</div>
+</body>
+
+</html>
+<script>
+    var server = "ws://192.168.4.1:8080"
+    /* WebSocket. */
+    var ws;
+    var reconnectIntervall, updateIntervall;
+    var connected = false;
+    var scoreL, scoreR, minutes, seconds, shotclock;
+    var modal, btn, span;
+    var connectionStatus
+
+
+    // function scoll_to_bottom() {
+    //     var logTa = document.getElementById("taLog")
+    //     logTa.scrollTop = logTa.scrollHeight;
+    // }
+
+    /* Establish connection. */
+    function doConnect(addr) {
+        /* Message to be sent. */
+        var msg;
+        /* Do connection. */
+        ws = new WebSocket(addr);
+
+        /* Register events. */
+        ws.onopen = function () {
+            connected = true;
+            // document.getElementById("btConn").value = "Disconnect!";
+            // document.getElementById("taLog").value += ("Connection opened\n");
+            //  scoll_to_bottom();
+            clearInterval(reconnectIntervall);
+            updateIntervall = setInterval(function () { send("update") }, 500);
+            connectionStatus.style.display = "none"
+
+        };
+
+        /* Deals with messages. */
+        ws.onmessage = function (evt) {
+            //     document.getElementById("taLog").value += ("Recv: " + evt.data + "\n");
+            //     scoll_to_bottom();
+            update(evt.data)
+        };
+
+        /* Close events. */
+        ws.onclose = function (event) {
+            // document.getElementById("btConn").value = "Connect!";
+            // document.getElementById("taLog").value +=
+            //     ("Connection closed: wasClean: " + event.wasClean + ", evCode: "
+            //         + event.code + "\n");
+            // scoll_to_bottom();
+            connected = false;
+            clearInterval(reconnectIntervall);
+            clearInterval(updateIntervall);
+            reconnect();
+            console.log("close");
+            connectionStatus.style.display = "block"
+        };
+    }
+    function reconnect() {
+        reconnectIntervall = setInterval(function () { doConnect(server); }, 5000);
+        console.log("reconnect");
+    }
+    function update(data) {
+        var obj = JSON.parse(data);
+        scoreL.innerHTML = obj.score[0];
+        scoreR.innerHTML = obj.score[1];
+        minutes.innerHTML = obj.time[0];
+        seconds.innerHTML = obj.time[1] < 10 ? "0" + obj.time[1] : obj.time[1];
+        shotclock.innerHTML = obj.shotclock;
+
+        obj.shotclock < 10 ? shotclock.style.color = "red" : shotclock.style.color = "green";
+
+
+
+    }
+
+    document.addEventListener("DOMContentLoaded", function (event) {
+        /* Connect buttom. */
+        // document.getElementById("btConn").onclick = function () {
+        //     if (connected == false) {
+        //         doConnect(server);
+        //     }
+
+        //     else {
+        //         ws.close();
+        //         connected = false;
+        //         document.getElementById("btConn").value = "Connect!";
+        //     }
+        // };
+
+        // /* Input text message. */
+        // document.getElementById("txtMsg").addEventListener('keyup', function (e) {
+        //     var key = e.which || e.keyCode;
+        //     if (key == 13)
+        //         document.getElementById("btMsg").click();
+        // });
+
+        // /* Send message. */
+        // document.getElementById("btMsg").onclick = send;
+        scoreL = document.getElementById("scoreL");
+        scoreR = document.getElementById("scoreR");
+        minutes = document.getElementById("minutes");
+        seconds = document.getElementById("seconds");
+        shotclock = document.getElementById("shotclockTime");
+        doConnect(server);
+
+        // Get the modal
+        modal = document.getElementById("myModal");
+
+        // Get the button that opens the modal
+        btn = document.getElementById("reset");
+
+        // Get the <span> element that closes the modal
+        span = document.getElementsByClassName("close")[0];
+
+        // When the user clicks on the button, open the modal
+        btn.onclick = function () {
+            modal.style.display = "block";
+        }
+
+        // When the user clicks on <span> (x), close the modal
+        span.onclick = function () {
+            modal.style.display = "none";
+        }
+        connectionStatus = document.getElementById("connectionStatus");
+
+
+        // When the user clicks anywhere outside of the modal, close it
+        window.onclick = function (event) {
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
+    });
+    function closeModal() {
+        modal.style.display = "none";
+    }
+    function send(text) {
+        if (connected == true) {
+            // var txt = document.getElementById("txtMsg");
+            // var log = document.getElementById("taLog");
+
+            ws.send(text);
+            // log.value += ("Send: " + text + "\n");
+            // txt.value = "";
+            //  scoll_to_bottom();
+        }
+    }
+
+
+    function sendCmd(command) {
+        console.log(command);
+        send(command);
+    }
+
+
+</script>
+
+<style>
+    #anzeige {
+        display: flex;
+        width: 100%;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .item {
+        flex-grow: 1;
+        margin: 10px;
+        text-align: center;
+        font-size: 20vmin;
+        order: 1
+    }
+
+    #playtime {
+        color: white;
+        font-size: 30vmin
+    }
+
+    #shotclock {
+        font-size: 30vmin;
+    }
+
+    p {
+        display: inline;
+    }
+
+    body {
+        font-family: Arial, Helvetica, sans-serif;
+         background-color: black; 
+        color: red
+    }
+
+    .scorebutton {
+        font-size: 9vmin;
+        width:9vmin;
+        width: 10vmin;
+        height: 10vmin
+    }
+
+    #scoreL,
+    #scoreR {
+        color: yellow
+    }
+
+    #shotclockTime {
+        color: green;
+    }
+
+    .inline {
+        display: inline
+    }
+
+    .shotclockReset {
+        vertical-align: middle;
+        font-size: 15vmin;
+        width:15vmin;
+
+    }
+
+    button {
+        font-size: 9vmin;
+        width: 9vmin;
+        padding: 1vmin;
+        text-align: center;
+    }
+
+    #startBtn {
+        font-size: 12vmin;
+        height:17vmin;
+        margin-top: 10vmin;
+        width:40vmin;
+
+    }
+
+    .center {
+        text-align: center;
+        vertical-align: middle;
+
+    }
+
+    .flexbutton {
+        font-size: 9vmin;
+        height:12vmin;
+        width:12vmin;
+
+        padding: 1vmin;
+        margin: 5vmin 5vmin 0vmin 5vmin;
+        text-align: center;
+        flex-grow: 0;
+    }
+
+    .timeBtn {
+        display: inline-block;
+        margin: 2vmin;
+    }
+
+    .timeBtnContainer {
+        display: inline-block;
+        width: 10vmin;
+        vertical-align: middle;
+    }
+
+    .container {
+        display: flex;
+        justify-content: center
+    }
+
+
+    @media screen and (orientation:portrait) {
+        #time {
+            order: 0;
+            width:100%
+        }
+    }
+
+    @media screen and (orientation:landscape) {
+        #playtime {
+            font-size: 20vmin
+        }
+
+        #shotclock {
+            font-size: 25vmin
+        }
+
+        #startBtn {
+            margin-top: 0vmin;
+        }
+    }
+
+    /* The Modal (background) */
+    .modal {
+        display: none;
+        /* Hidden by default */
+        position: fixed;
+        /* Stay in place */
+        z-index: 1;
+        /* Sit on top */
+        left: 0;
+        top: 0;
+        width: 100%;
+        /* Full width */
+        height: 100%;
+        /* Full height */
+        overflow: auto;
+        /* Enable scroll if needed */
+        background-color: rgb(0, 0, 0);
+        /* Fallback color */
+        background-color: rgba(0, 0, 0, 0.4);
+        /* Black w/ opacity */
+    }
+
+    /* Modal Content/Box */
+    .modal-content {
+        background-color: #fefefe;
+        margin: auto;
+        margin-top: 7.5vh;
+        vertical-align: middle;
+        /* margin: 20px; */
+        /* 15% from the top and centered */
+        padding: 20px;
+        border: 1px solid #888;
+        width: 80%;
+        height: 80%;
+        /* Could be more or less, depending on screen size */
+    }
+
+    /* The Close Button */
+    .close {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+    }
+
+    .close:hover,
+    .close:focus {
+        color: black;
+        text-decoration: none;
+        cursor: pointer;
+    }
+</style>
