@@ -111,7 +111,7 @@ int main(int argc, char *argv[]) {
 
   // --- Socket ---
   int read_size;
-  std::string response;
+  std::string response, disp_data;
   Socket csocket(false);
   pSocket_gl = &csocket;
 
@@ -154,8 +154,12 @@ int main(int argc, char *argv[]) {
           csocket.Close();
           break;
         }
-        canvas->Clear();
-        rgb_matrix::DrawText(canvas, font_std, 3, 32, color_white, &bg_color, response.c_str());
+        // Writa data only if changed
+        if (response != disp_data) {
+          disp_data = response;
+          canvas->Clear();
+          rgb_matrix::DrawText(canvas, font_std, 3, 32, color_white, &bg_color, disp_data.c_str());
+        }
 
       }
       canvas->Clear();
