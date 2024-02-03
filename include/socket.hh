@@ -94,16 +94,19 @@ public:
     {
         int shortRetval = -1;
         struct timeval tv;
-        tv.tv_sec = 20; /* 20 Secs Timeout */
+        tv.tv_sec = 2; /* 2 secs timeout */
         tv.tv_usec = 0;
         if (setsockopt(m_hSocket, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv, sizeof(tv)) < 0)
         {
-            printf("Time Out\n");
+            printf("setsockopt failed\n");
             return -1;
         }
         shortRetval = recv(m_hSocket, m_messageBuf, sizeof(m_messageBuf), MSG_NOSIGNAL);
-        printf("Incoming: %s\n", m_messageBuf);
-        sResponse = std::string((char*)m_messageBuf);
+        if(shortRetval > 0) {
+            printf("Incoming: %s\n", m_messageBuf);
+            sResponse = std::string((char*)m_messageBuf);
+        }
+        // sResponse = "";
         return shortRetval;
     }
 

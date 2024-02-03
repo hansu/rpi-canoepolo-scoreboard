@@ -115,6 +115,7 @@ int main(int argc, char *argv[]) {
   std::string response, disp_data;
   Socket csocket(false);
   pSocket_gl = &csocket;
+  int read_timeout = 0;
 
   // Main socket loop
   while(1){
@@ -140,27 +141,43 @@ int main(int argc, char *argv[]) {
 
       // Receive loop
       while(1){
-        // Receive data from the server
+        // Receive data from server
         read_size = csocket.SocketReceive(response);
         if(read_size == 0){
-          printf("Connection to server lost\n");
+          printf("Connection closed from server side\n");
           // this sending is required to not block the port
           csocket.SocketSend("Connection lost, closing socket");
           csocket.Close();
           break;
-        }
-        printf("send Ack\n");
-        if(csocket.SocketSend("Ack") < 0){
-          printf("Connection to server lost\n");
-          csocket.Close();
-          break;
-        }
-        // Writa data only if changed
-        if (response != disp_data) {
-          disp_data = response;
-          canvas->Clear();
-          rgb_matrix::DrawText(canvas, font_std, 3, 32, color_white, &bg_color, disp_data.c_str());
-          printf("Display updated\n");
+        } else if(read_size < 0) {
+          if (read_timeout < 10) {
+              printf("Read timed out (%d)\n", read_timeout);
+              disp_data = "-" + to_string(read_timeout);
+              canvas->Clear();
+              rgb_matrix::DrawText(canvas, font_std, 3, 32, color_red, &bg_color, disp_data.c_str());
+              printf("Display updated\n");
+              read_timeout++;
+          } else {
+              printf("%d timeouts, closing socket\n", read_timeout);
+              read_timeout = 0;
+              csocket.Close();
+              break;
+          }
+        } else {
+          read_timeout = 0;
+          printf("Send Ack\n");
+          if(csocket.SocketSend("Ack") < 0){
+            printf("Connection to server lost\n");
+            csocket.Close();
+            break;
+          }
+          // Writa data only if changed
+          if (response != disp_data) {
+            disp_data = response;
+            canvas->Clear();
+            rgb_matrix::DrawText(canvas, font_std, 3, 32, color_white, &bg_color, disp_data.c_str());
+            printf("Display updated\n");
+          }
         }
 
       }
