@@ -62,7 +62,7 @@ static void InterruptHandler(int signo) {
 int main(int argc, char *argv[]) {
 
   rgb_matrix::RuntimeOptions runtime;
-  runtime.gpio_slowdown = 4;
+  runtime.gpio_slowdown = 1;
 
   RGBMatrix::Options options;
   options.hardware_mapping = "regular";  // or e.g. "adafruit-hat"
@@ -72,11 +72,12 @@ int main(int argc, char *argv[]) {
   options.parallel = 1;
   options.pixel_mapper_config = "V-mapper:Z;Rotate:90";
   options.show_refresh_rate = false;
-  //options.pwm_lsb_nanoseconds = 200;
+  options.pwm_lsb_nanoseconds = 300;
   options.brightness = 100;
   options.multiplexing = 3;
   options.inverse_colors = false;
   options.led_rgb_sequence = "RGB";
+  options.pwm_bits = 2;
 
 
   Canvas *canvas = rgb_matrix::CreateMatrixFromFlags(&argc, &argv, &options);
@@ -159,6 +160,7 @@ int main(int argc, char *argv[]) {
           disp_data = response;
           canvas->Clear();
           rgb_matrix::DrawText(canvas, font_std, 3, 32, color_white, &bg_color, disp_data.c_str());
+          printf("Display updated\n");
         }
 
       }
