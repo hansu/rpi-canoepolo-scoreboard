@@ -19,6 +19,7 @@
 
 #include "led-matrix.h"
 #include "graphics.h"
+#include "custom_colors.h"
 
 #include <unistd.h>
 #include <math.h>
@@ -37,25 +38,18 @@
 using rgb_matrix::RGBMatrix;
 using rgb_matrix::Canvas;
 
-rgb_matrix::Color color_red(255, 0, 0);
-rgb_matrix::Color color_yellow(250, 190, 0);
-rgb_matrix::Color color_blue(0, 50, 255);
-rgb_matrix::Color color_green(0, 200, 0);
-rgb_matrix::Color color_white(200, 200, 200);
-rgb_matrix::Color color_orange(250, 130, 0);
-
 using namespace std;
 
 RGBMatrix *pRGBMatrix_gl;
 Socket *pSocket_gl;
 
-rgb_matrix::Color bg_color(0, 0, 0);
-rgb_matrix::Color outline_color(255,255,255);
+struct custom_colors_t custom_colors;
 
 int Training_Application(RGBMatrix *matrix);
 int ShotClock_Application(RGBMatrix *matrix);
 
 static void InterruptHandler(int signo) {
+  gpioTerminate();
   if(pRGBMatrix_gl != NULL){
     pRGBMatrix_gl->Clear();
     delete pRGBMatrix_gl;
@@ -63,7 +57,6 @@ static void InterruptHandler(int signo) {
   if(pSocket_gl != NULL){
     pSocket_gl->Close();
   }
-  gpioTerminate();
   exit(0);
 }
 
@@ -133,7 +126,7 @@ int ShotClock_Application(RGBMatrix *matrix)
     }
   }
 
-  rgb_matrix::DrawText(matrix, font_std, 3, 32, color_white, &bg_color, "--");
+  rgb_matrix::DrawText(matrix, font_std, 3, 32, custom_colors.white, &custom_colors.bg, "--");
 
   // --- Socket ---
   int read_size;
@@ -179,7 +172,7 @@ int ShotClock_Application(RGBMatrix *matrix)
               printf("Read timed out (%d)\n", read_timeout);
               disp_data = "-" + to_string(read_timeout);
               matrix->Clear();
-              rgb_matrix::DrawText(matrix, font_std, 3, 32, color_red, &bg_color, disp_data.c_str());
+              rgb_matrix::DrawText(matrix, font_std, 3, 32, custom_colors.red, &custom_colors.bg, disp_data.c_str());
               printf("Display updated\n");
               read_timeout++;
           } else {
@@ -200,14 +193,14 @@ int ShotClock_Application(RGBMatrix *matrix)
           if (response != disp_data) {
             disp_data = response;
             matrix->Clear();
-            rgb_matrix::DrawText(matrix, font_std, 3, 32, color_white, &bg_color, disp_data.c_str());
+            rgb_matrix::DrawText(matrix, font_std, 3, 32, custom_colors.white, &custom_colors.bg, disp_data.c_str());
             printf("Display updated\n");
           }
         }
 
       }
       matrix->Clear();
-      rgb_matrix::DrawText(matrix, font_std, 3, 32, color_white, &bg_color, "--");
+      rgb_matrix::DrawText(matrix, font_std, 3, 32, custom_colors.white, &custom_colors.bg, "--");
     }
   }
 }

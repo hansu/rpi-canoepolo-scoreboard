@@ -19,6 +19,7 @@
 
 #include "led-matrix.h"
 #include "graphics.h"
+#include "custom_colors.h"
 
 #include <unistd.h>
 // #include <math.h>
@@ -39,9 +40,22 @@ using namespace std;
 bool run = false, reset = false;
 
 #define PLAY_TIME 600 // in sec
-#define PAUSE_TIME 10 // in sec
+#define BREAK_TIME 10 // in sec
 #define POWERSAVE_TIME_1 100 // time until brightness switches to 50%
 #define POWERSAVE_TIME_2 120 // time until time display turns off
+
+extern struct custom_colors_t custom_colors;
+
+rgb_matrix::Color *counterColor_normal;
+rgb_matrix::Color *counterColor_pause;
+rgb_matrix::Color *timeColor;
+
+void initColors(void)
+{
+  counterColor_normal = &custom_colors.white;
+  counterColor_pause = &custom_colors.yellow;
+  timeColor = &custom_colors.green;
+}
 
 void pollButtons()
 {
@@ -59,6 +73,7 @@ void pollButtons()
       if (longPressCounter > 2000) {
         reset = true;
         longPressCounter = 0;
+        initColors();
         printf("resetting ..\n");
         while (!gpioRead(21));  // Waiting for release
       } else {
@@ -70,25 +85,9 @@ void pollButtons()
   }
 }
 
-
 int Training_Application(RGBMatrix *matrix)
 {
-  rgb_matrix::Color color_red(255, 0, 0);
-  rgb_matrix::Color color_yellow(250, 190, 0);
-  rgb_matrix::Color color_yellow_50(125, 85, 0);
-  rgb_matrix::Color color_blue(0, 50, 255);
-  rgb_matrix::Color color_green(0, 200, 0);
-  rgb_matrix::Color color_white(200, 200, 200);
-  rgb_matrix::Color color_white_50(100, 100, 100);
-  rgb_matrix::Color color_orange(250, 130, 0);
-  rgb_matrix::Color bg_color(0, 0, 0);
-  rgb_matrix::Color outline_color(255,255,255);
-
-  rgb_matrix::Color *CounterColor_normal;
-  rgb_matrix::Color *CounterColor_pause;
-  CounterColor_normal = &color_white;
-  CounterColor_pause = &color_yellow;
-
+  initColors();
 #define FONT_TIME_NARROW_PATH "fonts2/LiberationSansNarrow_b11x17.bdf"
 #define FONT_TIME_WIDE_PATH "fonts2/LiberationSans_b13x17.bdf"
 // #define FONT_CLOCK_PATH "fonts2/LiberationSans_b10x12.bdf"
@@ -119,7 +118,7 @@ int Training_Application(RGBMatrix *matrix)
   }
 
   char sTime[24];
-  int GameCounter = PLAY_TIME, BreakCounter = PAUSE_TIME; //, Clock = 18 * 3600;
+  int GameCounter = PLAY_TIME, BreakCounter = BREAK_TIME; //, Clock = 18 * 3600;
   bool Pause = true;
   std::time_t time_now;
   std::tm *tm;
@@ -138,64 +137,70 @@ int Training_Application(RGBMatrix *matrix)
   int powersaveCounter = 0;
 
   while(1){
-    matrix->Clear();
-    // sprintf(sTime, "%2d:%02d", Clock/3600, (Clock/60)%60);
-    // Clock ++;
-    std::time(&time_now); // update time
-    tm = std::localtime(&time_now);
-    strftime(sTime, sizeof(sTime), "%H:%M\n", tm);
-
-    // // Don't display clock if probably wrong
-    // if((tm->tm_hour >= 17) && (tm->tm_hour < 21)){
-    //   rgb_matrix::DrawText(matrix, font_clock, 9, 13, color_red,  &bg_color, sTime);
-    // }
-    rgb_matrix::DrawText(matrix, font_clock, 8, 13, color_red,  &bg_color, sTime);
-
-    if(reset) {
-      reset = false;
-      run = false;
-      Pause = false;
-      GameCounter = PLAY_TIME;
-      sprintf(sTime, "%2d:%02d", GameCounter/60, GameCounter%60);
-      rgb_matrix::DrawText(matrix, font_time_narrow, -4, 32, *CounterColor_normal,  &bg_color, sTime);
-    }
 
     // Decrease brightness after POWERSAVE_TIME_1 seconds and turn countdown time off after POWERSAVE_TIME_2 seconds
     if(!run){
       if(powersaveCounter <= POWERSAVE_TIME_2) {
         powersaveCounter ++;
         if(powersaveCounter == POWERSAVE_TIME_1) {
-          CounterColor_normal = &color_white_50;
-          CounterColor_pause = &color_yellow_50;
+          counterColor_normal = &custom_colors.white_50;
+          counterColor_pause = &custom_colors.yellow_50;
           printf("Set brightness to 50%%\n");
         }
         if(powersaveCounter == POWERSAVE_TIME_2) {
-          CounterColor_normal = &bg_color;
-          CounterColor_pause = &bg_color;
+          counterColor_normal = &custom_colors.bg;
+          counterColor_pause = &custom_colors.bg;
+          timeColor = &custom_colors.white;
           printf("Set brightness to 0%%\n");
         }
       }
     } else if(powersaveCounter) {
-      CounterColor_normal = &color_white;
-      CounterColor_pause = &color_yellow;
+      initColors();
       printf("Set brightness to 100%%\n");
       powersaveCounter = 0;
     }
 
+    if(reset) {
+      reset = false;
+      run = false;
+      Pause = true;
+      GameCounter = PLAY_TIME;
+      BreakCounter = BREAK_TIME;
+      powersaveCounter = 0;
+      // sprintf(sTime, "%2d:%02d", GameCounter/60, GameCounter%60);
+      // rgb_matrix::DrawText(matrix, font_time_narrow, -4, 32, *counterColor_normal, &custom_colors.bg, sTime);
+    }
+
+    // sprintf(sTime, "%2d:%02d", Clock/3600, (Clock/60)%60);
+    // Clock ++;
+    std::time(&time_now); // update time
+    tm = std::localtime(&time_now);
+    // \xC8\x80 = utf8 encoding for character 0x200 = userdefined clock symbol
+    strftime(sTime, sizeof(sTime), "\xC8\x80%H:%M\n", tm);
+
+    matrix->Clear();
+    // // Don't display clock if probably wrong
+    // if((tm->tm_hour >= 17) && (tm->tm_hour < 21)){
+    //   rgb_matrix::DrawText(matrix, font_clock, 9, 13, color_red,  &bg_color, sTime);
+    // }
+    // rgb_matrix::DrawText(matrix, font_clock, 8, 13, color_red,  &bg_color, sTime);
+    rgb_matrix::DrawText(matrix, font_clock, 0, 13, *timeColor, &custom_colors.bg, sTime);
+
+
     if(Pause) {
       if(BreakCounter == 0) {
         Pause = false;
-        BreakCounter = PAUSE_TIME;
+        BreakCounter = BREAK_TIME;
         continue;
       } else {
         if(run) BreakCounter--;
       }
       if(BreakCounter < 600) {
         sprintf(sTime, "%1d:%02d", BreakCounter/60, BreakCounter%60);
-        rgb_matrix::DrawText(matrix, font_time_wide, 0, 32, *CounterColor_pause,  &bg_color, sTime);
+        rgb_matrix::DrawText(matrix, font_time_wide, 0, 32, *counterColor_pause, &custom_colors.bg, sTime);
       } else {
         sprintf(sTime, "%2d:%02d", BreakCounter/60, BreakCounter%60);
-        rgb_matrix::DrawText(matrix, font_time_narrow, 0, 32, *CounterColor_pause,  &bg_color, sTime);
+        rgb_matrix::DrawText(matrix, font_time_narrow, 0, 32, *counterColor_pause, &custom_colors.bg, sTime);
       }
     } else {
       if(GameCounter == 0) {
@@ -207,10 +212,10 @@ int Training_Application(RGBMatrix *matrix)
       }
       if(GameCounter < 600) {
         sprintf(sTime, "%1d:%02d", GameCounter/60, GameCounter%60);
-        rgb_matrix::DrawText(matrix, font_time_wide, 0, 32, *CounterColor_normal,  &bg_color, sTime);
+        rgb_matrix::DrawText(matrix, font_time_wide, 0, 32, *counterColor_normal, &custom_colors.bg, sTime);
       } else {
         sprintf(sTime, "%2d:%02d", GameCounter/60, GameCounter%60);
-        rgb_matrix::DrawText(matrix, font_time_narrow, -4, 32, *CounterColor_normal,  &bg_color, sTime);
+        rgb_matrix::DrawText(matrix, font_time_narrow, -4, 32, *counterColor_normal, &custom_colors.bg, sTime);
       }
     }
 
