@@ -1,3 +1,4 @@
+
 /*
   Canoepolo Scoreboard
 
@@ -42,12 +43,13 @@ extern "C"{
 #ifndef CROSS_COMPILING
 /* Set this define if ncurses lib is not available.
 It is used for direct action on keyboard input without the need to press return */
-// #define USE_NCURSES
+#define USE_NCURSES
 #endif
 
 #ifdef USE_NCURSES
 #include <curses.h>
 #endif
+
 
 using rgb_matrix::RGBMatrix;
 using rgb_matrix::Canvas;
@@ -58,6 +60,7 @@ char sScoreA[24], sScoreB[24], sTime[24];
 volatile bool interrupt_received = false;
 static void InterruptHandler(int signo) {
   interrupt_received = true;
+  printf("exit...\n\r");
 }
 
 void KeyboardInput(DisplayData& dispData);
@@ -101,7 +104,7 @@ int main(int argc, char *argv[]) {
   timeout(-1); // set to blocking mode - otherwise time out value
   printf("Scoreboard started. Exit with q\n");
 #else
-  printf("Scoreboard started. Exit with q and Enter\n");
+  printf("Scoreboard started. Exit with q and Enter\n\r");
 #endif
 
   Canvas *canvas = rgb_matrix::CreateMatrixFromFlags(&argc, &argv, &options);
@@ -207,7 +210,7 @@ void onopen(int fd)
 {
   char *cli;
   cli = ws_getaddress(fd);
-  printf("Connection opened, client: %d | addr: %s\n", fd, cli);
+  printf("Connection opened, client: %d | addr: %s\n\r", fd, cli);
 
   free(cli);
 }
@@ -216,7 +219,7 @@ void onclose(int fd)
 {
   char *cli;
   cli = ws_getaddress(fd);
-  printf("Connection closed, client: %d | addr: %s\n", fd, cli);
+  printf("Connection closed, client: %d | addr: %s\n\r", fd, cli);
   free(cli);
 }
 
@@ -236,8 +239,8 @@ void onmessage(int fd, const unsigned char *msg, uint64_t size, int type)
   char *cli;
   std::stringstream ssResponse;
   cli = ws_getaddress(fd);
-  printf("Received message: %s (size: %" PRId64 ", type: %d), from: %s/%d  -->  ",
-    msg, size, type, cli, fd);
+  //printf("Received message: %s (size: %" PRId64 ", type: %d), from: %s/%d  -->  ",
+  //  msg, size, type, cli, fd);
   free(cli);
 
   if(size == 0) return;
@@ -258,12 +261,12 @@ void onmessage(int fd, const unsigned char *msg, uint64_t size, int type)
           else if(keyValue[0] == "ScoreR") dispData.setScoreB(stoi(keyValue[1]));
           else if(keyValue[0] == "ColorL") {
             std::vector<std::string> colorRGB = split(keyValue[1], ',');
-            printf("Color L: %d %d %d\n", stoi(colorRGB[0]), stoi(colorRGB[1]), stoi(colorRGB[2]));
+            printf("Color L: %d %d %d\n\r", stoi(colorRGB[0]), stoi(colorRGB[1]), stoi(colorRGB[2]));
             dispData.setColorA_RGB(stoi(colorRGB[0]), stoi(colorRGB[1]), stoi(colorRGB[2]));
           }
           else if(keyValue[0] == "ColorR") {
             std::vector<std::string> colorRGB = split(keyValue[1], ',');
-            printf("Color R: %d %d %d\n", stoi(colorRGB[0]), stoi(colorRGB[1]), stoi(colorRGB[2]));
+            printf("Color R: %d %d %d\n\r", stoi(colorRGB[0]), stoi(colorRGB[1]), stoi(colorRGB[2]));
             dispData.setColorB_RGB(stoi(colorRGB[0]), stoi(colorRGB[1]), stoi(colorRGB[2]));
           }
       }
@@ -307,7 +310,7 @@ void onmessage(int fd, const unsigned char *msg, uint64_t size, int type)
 
   // {"time" : [10, 0],"shotclock" : 60,"score" : [0, 0]};
   ssResponse << "{\"time\" : [" << dispData.getMin() << "," << dispData.getSec() << "],\"shotclock\" : " << dispData.getShotTimeout() << ",\"score\" : [" << dispData.getScoreA()  << "," << dispData.getScoreB() << "]}";
-  std::cout << "send: " << ssResponse.str() << std::endl;
+  // std::cout << "send: " << ssResponse.str() << std::endl;
   ws_sendframe(fd, ssResponse.str().c_str() , ssResponse.str().size(), true, type);
 }
 

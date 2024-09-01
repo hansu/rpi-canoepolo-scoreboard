@@ -41,7 +41,7 @@
 	/**
 	 * @brief Max clients connected simultaneously.
 	 */
-	#define MAX_CLIENTS    8
+	#define MAX_CLIENTS    50
 
 	/**
 	 * @brief Max number of `ws_server` instances running
