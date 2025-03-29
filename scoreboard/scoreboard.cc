@@ -239,39 +239,42 @@ void onmessage(int fd, const unsigned char *msg, uint64_t size, int type)
   char *cli;
   std::stringstream ssResponse;
   cli = ws_getaddress(fd);
-  //printf("Received message: %s (size: %" PRId64 ", type: %d), from: %s/%d  -->  ",
-  //  msg, size, type, cli, fd);
+  printf("Received message: %s (size: %" PRId64 ", type: %d), from: %s/%d\n", msg, size, type, cli, fd);
   free(cli);
 
   if(size == 0) return;
 
-  // std::string input = "ColorL=0,0,0;ColorR=0,0,0;ScoreL=0;ScoreR=0;Time=0;Shotclock=0";
+  // Expected string format: "ColorL=0,0,0;ColorR=0,0,0;ScoreL=0;ScoreR=0;Time=0;Shotclock=60";
   std::string input(reinterpret_cast<const char *>(msg));
   // Split the input string by semicolons to get key-value pairs
   std::vector<std::string> pairs = split(input, ';');
-
-  // Iterate over each pair
-  for (const auto &pair : pairs) {
+  try {
+    // Iterate over each pair
+    for (const auto &pair : pairs) {
       // Split each pair by the equals sign to separate key and value
       std::vector<std::string> keyValue = split(pair, '=');
       if (keyValue.size() == 2) {
-          if(keyValue[0] == "Time") dispData.setTime(stoi(keyValue[1]));
-          else if(keyValue[0] == "Shotclock") dispData.setShotclockTime(stoi(keyValue[1]));
-          else if(keyValue[0] == "ScoreL") dispData.setScoreA(stoi(keyValue[1]));
-          else if(keyValue[0] == "ScoreR") dispData.setScoreB(stoi(keyValue[1]));
-          else if(keyValue[0] == "ColorL") {
-            std::vector<std::string> colorRGB = split(keyValue[1], ',');
-            printf("Color L: %d %d %d\n\r", stoi(colorRGB[0]), stoi(colorRGB[1]), stoi(colorRGB[2]));
-            dispData.setColorA_RGB(stoi(colorRGB[0]), stoi(colorRGB[1]), stoi(colorRGB[2]));
-          }
-          else if(keyValue[0] == "ColorR") {
-            std::vector<std::string> colorRGB = split(keyValue[1], ',');
-            printf("Color R: %d %d %d\n\r", stoi(colorRGB[0]), stoi(colorRGB[1]), stoi(colorRGB[2]));
-            dispData.setColorB_RGB(stoi(colorRGB[0]), stoi(colorRGB[1]), stoi(colorRGB[2]));
-          }
+        if(keyValue[0] == "Time") dispData.setTime(stoi(keyValue[1]));
+        else if(keyValue[0] == "Shotclock") dispData.setShotclockTime(stoi(keyValue[1]));
+        else if(keyValue[0] == "ScoreL") dispData.setScoreA(stoi(keyValue[1]));
+        else if(keyValue[0] == "ScoreR") dispData.setScoreB(stoi(keyValue[1]));
+        else if(keyValue[0] == "ColorL") {
+          std::vector<std::string> colorRGB = split(keyValue[1], ',');
+          printf("Color L: %d %d %d\n\r", stoi(colorRGB[0]), stoi(colorRGB[1]), stoi(colorRGB[2]));
+          dispData.setColorA_RGB(stoi(colorRGB[0]), stoi(colorRGB[1]), stoi(colorRGB[2]));
+        }
+        else if(keyValue[0] == "ColorR") {
+          std::vector<std::string> colorRGB = split(keyValue[1], ',');
+          printf("Color R: %d %d %d\n\r", stoi(colorRGB[0]), stoi(colorRGB[1]), stoi(colorRGB[2]));
+          dispData.setColorB_RGB(stoi(colorRGB[0]), stoi(colorRGB[1]), stoi(colorRGB[2]));
+        }
       }
+    }
+  } catch(const std::invalid_argument &ex) {
+    printf("Error while converting number! (stoi)\n");
+  } catch(...) {
+    printf("Error while parsing string!\n");
   }
-
 
   if(strstr((const char*)msg,"update") != NULL){
     // do nothing, just send data
