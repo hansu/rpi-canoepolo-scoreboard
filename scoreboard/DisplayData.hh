@@ -14,6 +14,7 @@
 #include "graphics.h"
 
 typedef enum states { idle, running, paused } states_t;
+const std::vector<std::string> states_string =  {"idle", "running", "paused"};
 typedef enum colors { white, yellow, red, blue, green, orange, violet } colors_t;
 #define NUM_COLORS 5
 
@@ -162,7 +163,14 @@ public:
   void setState(states_t state)  { m_state = state; }
 
   states_t getState(void) {return m_state; }
+  std::string state2str(states_t state) {
+    return states_string[state];
+  }
   states_t getShotclockState(void) {return m_shotclockState; }
+
+  /*
+    Action when "playPause" command received from web-interface
+  */
   void start_pause(){
     if(m_state == running){
       stopTimer();
@@ -175,7 +183,9 @@ public:
     }
   }
 
-
+  /*
+    Action when "swapTeams" command received from web-interface
+  */
   void swapTeams(void){
     if (m_state == idle || m_nPlayTimeSec == 0)
     {

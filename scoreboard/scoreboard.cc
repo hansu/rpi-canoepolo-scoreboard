@@ -239,7 +239,7 @@ void onmessage(int fd, const unsigned char *msg, uint64_t size, int type)
   char *cli;
   std::stringstream ssResponse;
   cli = ws_getaddress(fd);
-  printf("Received message: %s (size: %" PRId64 ", type: %d), from: %s/%d\n", msg, size, type, cli, fd);
+  printf("Received message: %s (size: %" PRId64 ", type: %d), from: %s/%d --> ", msg, size, type, cli, fd);
   free(cli);
 
   if(size == 0) return;
@@ -311,9 +311,12 @@ void onmessage(int fd, const unsigned char *msg, uint64_t size, int type)
     dispData.SetRefresh(true);
   }
 
-  // {"time" : [10, 0],"shotclock" : 60,"score" : [0, 0]};
-  ssResponse << "{\"time\" : [" << dispData.getMin() << "," << dispData.getSec() << "],\"shotclock\" : " << dispData.getShotTimeout() << ",\"score\" : [" << dispData.getScoreA()  << "," << dispData.getScoreB() << "]}";
-  // std::cout << "send: " << ssResponse.str() << std::endl;
+  // {"time" : [10, 0],"shotclock" : 60,"score" : [0, 0], state = 0};
+  ssResponse << "{\"time\" : [" << dispData.getMin() << "," << dispData.getSec() << \
+  "],\"shotclock\" : " << dispData.getShotTimeout() << ",\"score\" : [" << dispData.getScoreA() \
+  << "," << dispData.getScoreB() << "],\"state\" : \"" << dispData.state2str(dispData.getState()) << "\"}";
+  std::cout << "send: " << ssResponse.str() << " -- internal: State: " << dispData.state2str(dispData.getState()) << \
+  ", ShotclockState: " << dispData.state2str(dispData.getShotclockState()) << std::endl;
   ws_sendframe(fd, ssResponse.str().c_str() , ssResponse.str().size(), true, type);
 }
 
