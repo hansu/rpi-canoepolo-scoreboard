@@ -124,9 +124,13 @@ public:
     m_nSeconds = 0;
     m_bTimerStarted = true;
     m_shotclockState = running;
+    m_state = running;
   }
 
-  void stopTimer()  { m_bTimerStarted = false; }
+  void stopTimer()  {
+    m_bTimerStarted = false;
+    m_state = idle;
+  }
 
   void updateTime()
   {
@@ -157,19 +161,16 @@ public:
   }
   void setState(states_t state)  { m_state = state; }
 
-  states_t getState(void)
-  {
-    return m_state;
-  }
-
+  states_t getState(void) {return m_state; }
+  states_t getShotclockState(void) {return m_shotclockState; }
   void start_pause(){
     if(m_state == running){
       stopTimer();
-      setState(paused);
+      m_state = paused;
       m_shotclockState = paused;
     } else {
       startTimer();
-      setState(running);
+      m_state = running;
       m_shotclockState = running;
     }
   }
