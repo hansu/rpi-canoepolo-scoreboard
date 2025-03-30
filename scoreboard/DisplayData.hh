@@ -33,7 +33,10 @@ public:
                 rgb_matrix::Color(0, 200, 0),
                 rgb_matrix::Color(250, 130, 0),
                 rgb_matrix::Color(220, 0, 220)}
-  { }
+  {
+    m_ColorA = m_colorList[m_teamAColorIndex];
+    m_ColorB = m_colorList[m_teamBColorIndex];
+  }
 
   int getScoreA()  { return m_nScoreA; }
 
@@ -256,7 +259,7 @@ public:
 
   void nextColorB(void){
     if (m_state != running){
-      m_teamAColorIndex = (colors_t)((int)m_teamBColorIndex+1);
+      m_teamBColorIndex = (colors_t)((int)m_teamBColorIndex+1);
       if(m_teamBColorIndex >= m_colorList.size()){
         m_teamBColorIndex = (colors_t)0;
       }
