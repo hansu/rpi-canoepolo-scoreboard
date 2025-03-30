@@ -321,10 +321,14 @@ void onmessage(int fd, const unsigned char *msg, uint64_t size, int type)
       dispData.nextColorA();
     } else if(strstr((const char*)msg,"colorRight") != NULL){
       dispData.nextColorB();
-    } else if(strstr((const char*)msg,"timePlus") != NULL){
+    } else if(strstr((const char*)msg,"timeMinutePlus") != NULL){
       dispData.modifyTime(60);
-    } else if(strstr((const char*)msg,"timeMinus") != NULL){
+    } else if(strstr((const char*)msg,"timeMinuteMinus") != NULL){
       dispData.modifyTime(-60);
+    } else if(strstr((const char*)msg,"timeSecondPlus") != NULL){
+      dispData.modifyTime(1);
+    } else if(strstr((const char*)msg,"timeSecondMinus") != NULL){
+      dispData.modifyTime(-1);
     }
     dispData.SetRefresh(true);
   }
