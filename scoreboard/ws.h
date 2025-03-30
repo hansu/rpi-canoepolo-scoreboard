@@ -14,7 +14,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  *
- * From https://github.com/Theldus/wsServer/ (https://theldus.github.io/wsServer/index.html)
+ * From https://github.com/Theldus/wsServer/tree/e072f885eeb0a92defea078d94dbba259579b868
+ * (https://theldus.github.io/wsServer/index.html)
  *
  * Test with iocat ws://scoreboard.local:8080 (https://github.com/moul/iocat)
  *

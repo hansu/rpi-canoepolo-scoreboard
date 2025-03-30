@@ -43,7 +43,7 @@ extern "C"{
 #ifndef CROSS_COMPILING
 /* Set this define if ncurses lib is not available.
 It is used for direct action on keyboard input without the need to press return */
-#define USE_NCURSES
+// #define USE_NCURSES
 #endif
 
 #ifdef USE_NCURSES
@@ -206,24 +206,36 @@ int main(int argc, char *argv[]) {
   return 0;
 }
 
+/**
+ * @brief This function is called whenever a new websocketconnection is opened.
+ * @param fd The new client file descriptor.
+ */
 void onopen(int fd)
 {
   char *cli;
   cli = ws_getaddress(fd);
   printf("Connection opened, client: %d | addr: %s\n\r", fd, cli);
-
+  dispData.AddWebsocketClient(fd);
+  dispData.SendWebsocketData(fd);
   free(cli);
 }
 
+/**
+ * @brief This function is called whenever a websocket connection is closed.
+ * @param fd The client file descriptor.
+ */
 void onclose(int fd)
 {
   char *cli;
   cli = ws_getaddress(fd);
   printf("Connection closed, client: %d | addr: %s\n\r", fd, cli);
+  dispData.RemoveWebsocketClient(fd);
   free(cli);
 }
 
-// Function to split a string by a delimiter and return a vector of substrings
+/*
+ * Function to split a string by a delimiter and return a vector of substrings
+ */
 std::vector<std::string> split(const std::string &str, char delimiter) {
     std::vector<std::string> tokens;
     std::string token;
@@ -234,10 +246,16 @@ std::vector<std::string> split(const std::string &str, char delimiter) {
     return tokens;
 }
 
+/*
+ * Websocket message events goes here.
+ * @param fd   Client file descriptor.
+ * @param msg  Message content.
+ * @param size Message size.
+ * @param type Message type (text or binay).
+ */
 void onmessage(int fd, const unsigned char *msg, uint64_t size, int type)
 {
   char *cli;
-  std::stringstream ssResponse;
   cli = ws_getaddress(fd);
   printf("Received message: %s (size: %" PRId64 ", type: %d), from: %s/%d --> ", msg, size, type, cli, fd);
   free(cli);
@@ -310,23 +328,30 @@ void onmessage(int fd, const unsigned char *msg, uint64_t size, int type)
     }
     dispData.SetRefresh(true);
   }
-
-  // {"time" : [10, 0],"shotclock" : 60,"score" : [0, 0], state = 0};
-  ssResponse << "{\"time\" : [" << dispData.getMin() << "," << dispData.getSec() << \
-  "],\"shotclock\" : " << dispData.getShotTimeout() << ",\"score\" : [" << dispData.getScoreA() \
-  << "," << dispData.getScoreB() << "],\"state\" : \"" << dispData.state2str(dispData.getState()) << "\"}";
-  std::cout << "send: " << ssResponse.str() << " -- internal: State: " << dispData.state2str(dispData.getState()) << \
-  ", ShotclockState: " << dispData.state2str(dispData.getShotclockState()) << std::endl;
-  ws_sendframe(fd, ssResponse.str().c_str() , ssResponse.str().size(), true, type);
+  dispData.SendWebsocketData(fd);
 }
 
-void WsSocket (DisplayData& dispData){
+/*
+ * Sends data to the specified websocket connection.
+ * Format: {"time" : [10, 0],"shotclock" : 60,"score" : [0, 0], state = "idle"};
+ */
+void DisplayData::SendWebsocketData(int fd){
+    std::stringstream ssResponse;
+    ssResponse << "{\"time\" : [" << dispData.getMin() << "," << dispData.getSec() << \
+    "],\"shotclock\" : " << dispData.getShotTimeout() << ",\"score\" : [" << dispData.getScoreA() \
+    << "," << dispData.getScoreB() << "],\"state\" : \"" << dispData.state2str(dispData.getState()) << "\"}";
+    std::cout << "send: " << ssResponse.str() << ", (state: " << dispData.state2str(dispData.getState()) << \
+    ", shotclockState: " << dispData.state2str(dispData.getShotclockState()) << ")" <<std::endl;
+    ws_sendframe(fd, ssResponse.str().c_str() , ssResponse.str().size(), true, 1);
+  }
 
+/*
+* Register websocket events.
+*/
+void WsSocket (DisplayData& dispData){
   struct ws_events evs;
   evs.onopen    = &onopen;
   evs.onclose   = &onclose;
   evs.onmessage = &onmessage;
   ws_socket(&evs, 8080); /* Never returns. */
-
-
 }

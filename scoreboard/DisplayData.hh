@@ -12,6 +12,7 @@
 #include <time.h>
 #include <vector>
 #include "graphics.h"
+#include <list>
 
 typedef enum states { idle, running, paused } states_t;
 const std::vector<std::string> states_string =  {"idle", "running", "paused"};
@@ -157,6 +158,7 @@ public:
           }
           m_bUpdateShotclock = true;
         }
+        UpdateData();
       }
     }
   }
@@ -167,6 +169,17 @@ public:
     return states_string[state];
   }
   states_t getShotclockState(void) {return m_shotclockState; }
+
+  /*
+   * Send data to all connected websocket clients.
+   */
+  void UpdateData(){
+    for (auto it = m_websocket_clients.begin(); it != m_websocket_clients.end(); ++it){
+      SendWebsocketData(*it);
+    }
+  }
+
+  void SendWebsocketData(int fd);
 
   /*
     Action when "playPause" command received from web-interface
@@ -261,6 +274,21 @@ public:
   void SetRefresh(bool val){
 	  m_bUpdateDisplay = val;
   }
+
+  /*
+   * Adds a client to the list of connected websocket clients.
+   */
+  void AddWebsocketClient(int fd){
+    m_websocket_clients.push_back(fd);
+  }
+
+  /*
+   * Removes a client of the list of connected websocket clients.
+   */
+  void RemoveWebsocketClient(int fd){
+    m_websocket_clients.remove(fd);
+  }
+
 private:
   int m_nScoreA, m_nScoreB, m_nPlayTimeSec, m_nShotTimeout;
   colors_t m_teamAColorIndex, m_teamBColorIndex;
@@ -272,18 +300,15 @@ private:
   rgb_matrix::Color m_ColorA;
   rgb_matrix::Color m_ColorB;
   std::vector<rgb_matrix::Color> m_colorList;
+  std::list<int> m_websocket_clients;
 
-
-
-    // color_white(200, 200, 200),
-    // color_yellow(250, 190, 0),
-    // color_red(255, 0, 0),
-    // color_blue(0, 50, 255),
-    // color_green(0, 200, 0),
-    // color_orange(250, 130, 0),
-    // color_violet(220, 0, 220),
-
-
+  // color_white(200, 200, 200),
+  // color_yellow(250, 190, 0),
+  // color_red(255, 0, 0),
+  // color_blue(0, 50, 255),
+  // color_green(0, 200, 0),
+  // color_orange(250, 130, 0),
+  // color_violet(220, 0, 220),
 };
 
 
