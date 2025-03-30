@@ -74,7 +74,8 @@ public:
 
   void resetShotclock()
   {
-    m_nShotTimeout = 60;
+    if (m_nPlayTimeSec < 60) m_nShotTimeout = m_nPlayTimeSec;
+    else m_nShotTimeout = 60;
     m_shotclockState = running;
   }
 
