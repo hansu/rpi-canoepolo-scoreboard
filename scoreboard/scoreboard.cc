@@ -41,23 +41,24 @@ extern "C"{
 
 /* use this if using a cross compiler because it doesn't have ncurses lib included */
 #ifndef CROSS_COMPILING
-/* Set this define if ncurses lib is not available.
+/* Set this define if ncurses lib is available.
 It is used for direct action on keyboard input without the need to press return */
-// #define USE_NCURSES
+#define USE_NCURSES
 #endif
 
 #ifdef USE_NCURSES
 #include <curses.h>
 #endif
 
+// Defaults to false, enable only via command line option
+bool use_ncurses_gl = false;
 
 using rgb_matrix::RGBMatrix;
 using rgb_matrix::Canvas;
 
 char sScoreA[24], sScoreB[24], sTime[24];
-
-
 volatile bool interrupt_received = false;
+
 static void InterruptHandler(int signo) {
   interrupt_received = true;
   printf("exit...\n\r");
@@ -97,17 +98,26 @@ int main(int argc, char *argv[]) {
   options.inverse_colors = false;
   options.led_rgb_sequence = "RGB";
 
-#ifdef USE_NCURSES
-  // initializing curses lib
-  initscr();
-  noecho();
-  timeout(-1); // set to blocking mode - otherwise time out value
-  printf("Scoreboard started. Exit with q\n");
-#else
-  printf("Scoreboard started. Exit with q and Enter\n\r");
-#endif
+  // Parse command line arguments
+  for (int i = 1; i < argc; i++) {
+    if(strcmp(argv[i], "--use-ncurses") == 0) {
+      #ifdef USE_NCURSES
+      use_ncurses_gl = true;
+      // initializing curses lib
+      initscr();
+      noecho();
+      timeout(-1); // set to blocking mode - otherwise time out value
+      #endif
+    }
+  }
 
-  Canvas *canvas = rgb_matrix::CreateMatrixFromFlags(&argc, &argv, &options);
+  if (use_ncurses_gl) {
+    printf("Scoreboard started. Exit with q\n");
+  } else{
+    printf("Scoreboard started. Exit with q and Enter\n\r");
+  }
+
+Canvas *canvas = rgb_matrix::CreateMatrixFromFlags(&argc, &argv, &options);
   if (canvas == NULL)
     return 1;
 
@@ -198,11 +208,14 @@ int main(int argc, char *argv[]) {
     }
     usleep(200 * 1000);
   }
-#ifdef USE_NCURSES
-  endwin();
-#endif
-  canvas->Clear();
-  delete canvas;
+  if (use_ncurses_gl){
+    #ifdef USE_NCURSES
+    endwin();
+    #endif
+  } else {
+    canvas->Clear();
+    delete canvas;
+  }
   return 0;
 }
 
