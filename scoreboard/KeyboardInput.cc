@@ -15,6 +15,16 @@
 #include <sstream>
 
 extern volatile bool bExit;
+extern volatile bool use_ncurses_gl;
+// #define DEBUG_KEYS
+
+#ifndef CROSS_COMPILING
+#define USE_NCURSES
+#endif
+
+#ifdef USE_NCURSES
+#include <curses.h>
+#endif
 
 /*
  * Search for str2 in str1
@@ -25,7 +35,6 @@ bool rfind_str(std::string &str1, std::string str2){
     return (str1.substr(str1.size()-str2.size(), str2.size()) == str2);
   else
     return false;
-
 }
 
 /*
@@ -59,13 +68,15 @@ void KeyboardInput(DisplayData& dispData)
 
   while(1){
     // Check input
-#ifdef USE_NCURSES
-    nInput = getch();
-#else
-    nInput = getchar();
-#endif
+    if (use_ncurses_gl){
+      #ifdef USE_NCURSES
+      nInput = getch();
+      #endif
+    } else{
+      nInput = getchar();
+    }
 #ifdef DEBUG_KEYS
-    cout << nInput << "-------" << endl;
+    std::cout << nInput << "-------" << std::endl;
 #endif
     switch(nInput){
       case 'r':

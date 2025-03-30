@@ -37,12 +37,7 @@ extern "C"{
 #include "ws.h"
 }
 
-//#define CROSS_COMPILING
-
-/* use this if using a cross compiler because it doesn't have ncurses lib included */
 #ifndef CROSS_COMPILING
-/* Set this define if ncurses lib is available.
-It is used for direct action on keyboard input without the need to press return */
 #define USE_NCURSES
 #endif
 
