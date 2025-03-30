@@ -59,9 +59,8 @@ static void InterruptHandler(int signo) {
   printf("exit...\n\r");
 }
 
-void KeyboardInput(DisplayData& dispData);
-void ShotclockCom1 (DisplayData& dispData);
-void ShotclockCom2 (DisplayData& dispData);
+void KeyboardInput (DisplayData& dispData);
+void ShotclockCom (DisplayData& dispData, const char* name, int port);
 void WsSocket (DisplayData& dispData);
 volatile bool bExit = false;
 
@@ -148,8 +147,8 @@ Canvas *canvas = rgb_matrix::CreateMatrixFromFlags(&argc, &argv, &options);
   pTimeColor = &color_white;
 
   std::thread inputThread(KeyboardInput, std::ref(dispData));
-  std::thread socketThread1(ShotclockCom1, std::ref(dispData));
-  std::thread socketThread2(ShotclockCom2, std::ref(dispData));
+  std::thread socketThread1(ShotclockCom, std::ref(dispData), "Shotclock 1", 9000);
+  std::thread socketThread2(ShotclockCom, std::ref(dispData), "Shotclock 2", 9001);
   std::thread wsSocketThread(WsSocket, std::ref(dispData));
 
   while(1){

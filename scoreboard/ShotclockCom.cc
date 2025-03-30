@@ -12,7 +12,7 @@
 #include <sstream>
 
 
-void ShotclockCom1 (DisplayData& dispData)
+void ShotclockCom (DisplayData& dispData, const char* name, int port)
 {
   Socket csocket(true);
 
@@ -20,22 +20,22 @@ void ShotclockCom1 (DisplayData& dispData)
   while(1){
     if(csocket.SocketCreate() == -1)
     {
-      printf("Could not create socket\n");
+      printf("[%s] Could not create socket\n", name);
       sleep(5);
     } else{
-      printf("Socket is created\n");
+      printf("[%s] Socket is created\n", name);
       break;
     }
   }
 
   //Bind
   while(1){
-    if(csocket.BindCreatedSocket(9000) < 0)
+    if(csocket.BindCreatedSocket(port) < 0)
     {
-      printf("bind failed");
+      printf("[%s] bind failed\n", name);
       sleep(5);
     } else {
-      printf("bind done\n");
+      printf("[%s] bind done\n", name);
       break;
     }
   }
@@ -47,83 +47,23 @@ void ShotclockCom1 (DisplayData& dispData)
 
   while(1)
   {
-      printf("Waiting for incoming connections...\n");
+      printf("[%s] Waiting for incoming connections...\n", name);
       //Accept incoming connection
       if (csocket.Accept() < 0)
       {
-          perror("accept failed");
+          printf("[%s] accept failed", name);
           break;
       }
-      printf("Connection accepted\n");
+      printf("[%s] Connection accepted\n", name);
 
       while(1){
         //if(dispData.NeedShotclockRefresh()){
         sprintf(tx_string, "%02d", dispData.getShotTimeout());
-        printf("send %s\n", tx_string);
+        printf("[%s] send %s\n", name, tx_string);
 
         if((retVal = csocket.SocketSend(std::string(tx_string))) < 0)
         {
-          printf("send failed (error %d)\n", retVal);
-          break;
-        }
-        usleep(250000);
-      }
-  }
-
-}
-
-void ShotclockCom2 (DisplayData& dispData)
-{
-  Socket csocket(true);
-
- //Create socket
-  while(1){
-    if(csocket.SocketCreate() == -1)
-    {
-      printf("[2] Could not create socket\n");
-      sleep(5);
-    } else{
-      printf("[2] Socket is created\n");
-      break;
-    }
-  }
-
-  //Bind
-  while(1){
-    if(csocket.BindCreatedSocket(9001) < 0)
-    {
-      printf("[2] bind failed");
-      sleep(5);
-    } else {
-      printf("[2] bind done\n");
-      break;
-    }
-  }
-
-  //Listen
-  csocket.Listen();
-  char tx_string[10];
-  int retVal;
-
-  while(1)
-  {
-      printf("[2] Waiting for incoming connections...\n");
-      //Accept incoming connection
-      if (csocket.Accept() < 0)
-      {
-          perror("[2] accept failed");
-          break;
-      }
-      printf("[2] Connection accepted\n");
-
-      while(1){
-        //if(dispData.NeedShotclockRefresh()){
-        sprintf(tx_string, "%02d", dispData.getShotTimeout());
-        printf("[2] send %s\n", tx_string);
-
-        if((retVal = csocket.SocketSend(std::string(tx_string))) < 0)
-        {
-          printf("[2] send failed (error %d)\n", retVal);
+          printf("[%s] send failed (error %d)\n", name, retVal);
           break;
         }
         usleep(250000);
