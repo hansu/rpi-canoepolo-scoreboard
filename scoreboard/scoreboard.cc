@@ -347,11 +347,14 @@ void onmessage(int fd, const unsigned char *msg, uint64_t size, int type)
  * Format: {"time" : [10, 0],"shotclock" : 60,"score" : [0, 0], state = "idle"};
  */
 void DisplayData::SendWebsocketData(int fd){
+    printf("color: %d\n", dispData.getColorA()->r);
     std::stringstream ssResponse;
-    ssResponse << "{\"time\" : [" << dispData.getMin() << "," << dispData.getSec() << \
-    "],\"shotclock\" : " << dispData.getShotTimeout() << ",\"score\" : [" << dispData.getScoreA() \
-    << "," << dispData.getScoreB() << "],\"state\" : \"" << dispData.state2str(dispData.getState()) << "\"}";
-    std::cout << "send: " << ssResponse.str() << ", (state: " << dispData.state2str(dispData.getState()) << \
+    ssResponse << "{\"time\":[" << dispData.getMin() << "," << dispData.getSec() << "]"\
+    <<", \"shotclock\":" << dispData.getShotTimeout() << ",\"score\":[" << dispData.getScoreA() << "," << dispData.getScoreB() << "]"
+    << ", \"state\":\"" << dispData.state2str(dispData.getState()) << "\""
+    << ", \"color\":[\"rgb(" << (int)dispData.getColorA()->r << ", " << (int)dispData.getColorA()->g << "," << (int)dispData.getColorA()->b << ")\", \"rgb("
+                            << (int)dispData.getColorB()->r << ", " << (int)dispData.getColorB()->g << "," << (int)dispData.getColorB()->b << ")\"]}";
+    std::cout << "send: " << ssResponse.str() << ", -- (state: " << dispData.state2str(dispData.getState()) << \
     ", shotclockState: " << dispData.state2str(dispData.getShotclockState()) << ")" <<std::endl;
     ws_sendframe(fd, ssResponse.str().c_str() , ssResponse.str().size(), true, 1);
   }
