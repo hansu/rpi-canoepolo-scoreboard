@@ -137,34 +137,38 @@ public:
     m_state = idle;
   }
 
+  /*
+   * This function is executed every 200 ms.
+   */
   void updateTime()
   {
-    if(m_bTimerStarted)
-    {
       m_nSecondsLast = m_nSeconds;
       m_nSeconds = (int)difftime(time(NULL), m_nStartTime);
       if(m_nSecondsLast != m_nSeconds)
       {
-        m_nPlayTimeSec -= (m_nSeconds - m_nSecondsLast);
-        if(m_nPlayTimeSec <= 0)
+        if(m_bTimerStarted)
         {
-          m_nPlayTimeSec = 0;
-          m_bTimerStarted = false;
-          m_state = idle;
-        }
-        m_bUpdateDisplay = true;
-
-        if(m_shotclockState == running){
-          m_nShotTimeout -= (m_nSeconds - m_nSecondsLast);
-          if(m_nShotTimeout <= 0){
-            m_nShotTimeout = 0;
+          m_nPlayTimeSec -= (m_nSeconds - m_nSecondsLast);
+          if(m_nPlayTimeSec <= 0)
+          {
+            m_nPlayTimeSec = 0;
+            m_bTimerStarted = false;
+            m_state = idle;
           }
-          m_bUpdateShotclock = true;
+          m_bUpdateDisplay = true;
+
+          if(m_shotclockState == running){
+            m_nShotTimeout -= (m_nSeconds - m_nSecondsLast);
+            if(m_nShotTimeout <= 0){
+              m_nShotTimeout = 0;
+            }
+            m_bUpdateShotclock = true;
+          }
         }
         UpdateData();
       }
-    }
   }
+
   void setState(states_t state)  { m_state = state; }
 
   states_t getState(void) {return m_state; }

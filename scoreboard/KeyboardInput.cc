@@ -162,7 +162,8 @@ void KeyboardInput(DisplayData& dispData)
           sBuf.clear(); // = "    ";
 
         break;
-    }
+    } // End switch (nInput)
+    dispData.UpdateData();
    // printw("%2d %02d:%02d %2d\r", dispData.getScoreA(), dispData.getMin(), dispData.getSec(), dispData.getScoreB());
     dispData.SetRefresh(true);
   }
