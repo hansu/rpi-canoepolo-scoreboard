@@ -195,7 +195,7 @@ public:
       stopTimer();
       m_state = paused;
       m_shotclockState = paused;
-    } else {
+    } else if(m_nPlayTimeSec > 0) {
       startTimer();
       m_state = running;
       m_shotclockState = running;
