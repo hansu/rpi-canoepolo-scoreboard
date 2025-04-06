@@ -36,6 +36,7 @@
 extern "C"{
 #include "ws.h"
 }
+#include "config.h"
 
 #ifndef CROSS_COMPILING
 #define USE_NCURSES
@@ -147,8 +148,8 @@ Canvas *canvas = rgb_matrix::CreateMatrixFromFlags(&argc, &argv, &options);
   pTimeColor = &color_white;
 
   std::thread inputThread(KeyboardInput, std::ref(dispData));
-  std::thread socketThread1(ShotclockCom, std::ref(dispData), "Shotclock 1", 9000);
-  std::thread socketThread2(ShotclockCom, std::ref(dispData), "Shotclock 2", 9001);
+  std::thread socketThread1(ShotclockCom, std::ref(dispData), "Shotclock 1", SHOTCLOCK1_PORT);
+  std::thread socketThread2(ShotclockCom, std::ref(dispData), "Shotclock 2", SHOTCLOCK2_PORT);
   std::thread wsSocketThread(WsSocket, std::ref(dispData));
 
   while(1){

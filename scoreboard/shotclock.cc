@@ -31,6 +31,7 @@
 #include <string>
 #include "DisplayData.hh"
 #include "socket.hh"
+#include "config.h"
 
 using rgb_matrix::RGBMatrix;
 using rgb_matrix::Canvas;
@@ -63,6 +64,8 @@ int main(int argc, char *argv[]) {
 
   rgb_matrix::RuntimeOptions runtime;
   runtime.gpio_slowdown = 1;
+  int nScoreboard_port;
+  int nShotclock_id = 1;
 
   RGBMatrix::Options options;
   options.hardware_mapping = "regular";  // or e.g. "adafruit-hat"
@@ -79,7 +82,22 @@ int main(int argc, char *argv[]) {
   options.led_rgb_sequence = "RGB";
   options.pwm_bits = 2;
 
-
+  // Parse command line arguments
+  const char* id_prefix = "--id=";
+  for (int i = 1; i < argc; i++) {
+    if(strncmp(argv[i], id_prefix, strlen(id_prefix)) == 0) {
+      char* idStr = argv[i] + strlen(id_prefix);
+      nShotclock_id = atoi(idStr);
+    }
+  }
+  switch (nShotclock_id){
+    default:
+      printf("Id <%d> out of range, using Id=1\n", nShotclock_id);
+      nShotclock_id = 1;
+    case 1: nScoreboard_port = SHOTCLOCK1_PORT; break;
+    case 2: nScoreboard_port = SHOTCLOCK2_PORT; break;
+  }
+  printf("Shotclock %d started, port: %d. Exit with Ctrl + C.\n", nShotclock_id, nScoreboard_port);
   Canvas *canvas = rgb_matrix::CreateMatrixFromFlags(&argc, &argv, &options);
   if (canvas == NULL)
     return 1;
@@ -129,7 +147,7 @@ int main(int argc, char *argv[]) {
       // Connect loop
       while(1){
         // Connect to remote server
-        if (csocket.SocketConnect("scoreboard.local", 9000) < 0) {
+        if (csocket.SocketConnect("scoreboard.local", nScoreboard_port) < 0) {
             perror("connect failed");
             sleep(2);
             printf("try to reconnect... \n");

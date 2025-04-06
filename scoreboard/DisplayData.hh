@@ -14,9 +14,6 @@
 #include "graphics.h"
 #include <list>
 
-/* Define CROSS_COMPILING if using a cross compiler because it doesn't have ncurses lib included */
-// #define CROSS_COMPILING
-
 typedef enum states { idle, running, paused } states_t;
 const std::vector<std::string> states_string =  {"idle", "running", "paused"};
 typedef enum colors { white, yellow, red, blue, green, orange, violet } colors_t;
