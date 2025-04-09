@@ -1,0 +1,16 @@
+.teamName {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.colorPicker {
+    width: 30px;
+    margin-left: 10px
+}
+
+.scoreboardConnectionStatus {
+    width: 30px;
+    margin-left: 20px;
+    fill: darkred
+}

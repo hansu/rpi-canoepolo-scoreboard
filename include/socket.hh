@@ -19,7 +19,7 @@ public:
     // Create a Socket for server communication
     short SocketCreate(void)
     {
-        printf("Create the socket\n");
+        printf("Create the socket\n\r");
         if(m_isServer){
             m_hServerSocket = socket(AF_INET, SOCK_STREAM, 0);
             return m_hServerSocket;
@@ -83,7 +83,7 @@ public:
         tv.tv_usec = 0;
         if (setsockopt(m_hSocket, SOL_SOCKET, SO_SNDTIMEO, (char *)&tv, sizeof(tv)) < 0)
         {
-            printf("Time Out\n");
+            printf("Time Out\n\r");
             return -1;
         }
         shortRetval = send(m_hSocket, sRequest.c_str(), sRequest.length()+1, MSG_NOSIGNAL);
@@ -103,7 +103,7 @@ public:
         }
         shortRetval = recv(m_hSocket, m_messageBuf, sizeof(m_messageBuf), MSG_NOSIGNAL);
         if(shortRetval > 0) {
-            printf("Incoming: %s\n", m_messageBuf);
+            printf("Incoming: %s\n\r", m_messageBuf);
             sResponse = std::string((char*)m_messageBuf);
         }
         // sResponse = "";

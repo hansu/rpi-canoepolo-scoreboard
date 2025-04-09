@@ -1,0 +1,39 @@
+{
+  "manifest_version": 3,
+  "name": "Scoreboard Connector",
+  "description": "Connects Kaykers.nl Cockpit with the Scoreboard",
+  "version": "1.0",
+  "icons": {
+    "16": "images/icon-16.png",
+    "32": "images/icon-32.png",
+    "48": "images/icon-48.png",
+    "128": "images/icon-128.png"
+  },
+
+  "action": {
+    "default_icon": {
+      "16": "images/icon-16.png",
+      "32": "images/icon-32.png",
+      "48": "images/icon-48.png",
+      "128": "images/icon-128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "css": ["styles.css"],
+      "js": ["content.js"],
+
+      "world": "MAIN",
+      "matches": [
+        "https://cpt.test.kayakers.nl/cockpit*",
+        "https://cpt.kayakers.nl/cockpit*"
+      ]
+    }
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "scoreboard@CockpitConnector.com",
+      "strict_min_version": "128.0"
+    }
+  }
+}
