@@ -169,14 +169,16 @@ Canvas *canvas = rgb_matrix::CreateMatrixFromFlags(&argc, &argv, &options);
 
       sprintf(sTime, "%2d:%02d", dispData.getMin(), dispData.getSec());
 
+      int x_pos;
       if(dispData.getMin() == 1)
-        rgb_matrix::DrawText(canvas, font_std, 35, 32, *pTimeColor,  &bg_color, sTime,   letter_spacing);
+        x_pos = 35;
       else if(dispData.getMin() < 10)
-        rgb_matrix::DrawText(canvas, font_std, 29, 32, *pTimeColor,  &bg_color, sTime,   letter_spacing);
+        x_pos = 29;
       else if(dispData.getMin() < 20)
-        rgb_matrix::DrawText(canvas, font_std, 36, 32, *pTimeColor,  &bg_color, sTime,   letter_spacing);
+        x_pos = 36;
       else
-        rgb_matrix::DrawText(canvas, font_std, 33, 32, *pTimeColor,  &bg_color, sTime,   letter_spacing);
+        x_pos = 33;
+      rgb_matrix::DrawText(canvas, font_std, x_pos, 32, *pTimeColor, &bg_color, sTime, letter_spacing);
 
       if(dispData.getScoreB() < 10){
         sprintf(sScoreB, "%d", dispData.getScoreB());
