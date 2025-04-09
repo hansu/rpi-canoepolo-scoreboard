@@ -129,6 +129,7 @@ Canvas *canvas = rgb_matrix::CreateMatrixFromFlags(&argc, &argv, &options);
 
   // Load bdf bitmap fonts
   rgb_matrix::Font font_std, font_narr;
+  rgb_matrix::Font *pFont = &font_std;  // current font
   if (!font_std.LoadFont("../fonts2/LiberationSansNarrow_bb32.bdf")) {
     if (!font_std.LoadFont("Scoreboard/fonts2/LiberationSansNarrow_bb32.bdf")) {
       fprintf(stderr, "Couldn't load std font '%s'\n", "../fonts2/LiberationSansNarrow_bb32.bdf");
@@ -156,40 +157,40 @@ Canvas *canvas = rgb_matrix::CreateMatrixFromFlags(&argc, &argv, &options);
     dispData.updateTime();
 
     if(dispData.NeedRefresh()){
-
       canvas->Clear();
 
+      // Display left score (A)
       if(dispData.getScoreA() < 10){
         sprintf(sScoreA, "%d ", dispData.getScoreA());
-        rgb_matrix::DrawText(canvas, font_std, 0, 32, *dispData.getColorA(), &bg_color, sScoreA, letter_spacing);
+        pFont = font_std;
       } else{
         sprintf(sScoreA, "%2d ", dispData.getScoreA());
-        rgb_matrix::DrawText(canvas, font_narr, 0, 32, *dispData.getColorA(), &bg_color, sScoreA, letter_spacing);
+        pFont = font_narrow;
       }
+      rgb_matrix::DrawText(canvas, *pFont, 0, 32, *dispData.getColorA(), &bg_color, sScoreA, letter_spacing);
 
-      sprintf(sTime, "%2d:%02d", dispData.getMin(), dispData.getSec());
-
+      // Display time
       int x_pos;
-      if(dispData.getMin() == 1)
-        x_pos = 35;
-      else if(dispData.getMin() < 10)
-        x_pos = 29;
-      else if(dispData.getMin() < 20)
-        x_pos = 36;
-      else
-        x_pos = 33;
+      sprintf(sTime, "%2d:%02d", dispData.getMin(), dispData.getSec());
+      if (dispData.getMin() == 1) x_pos = 35;
+      else if (dispData.getMin() < 10) x_pos = 29;
+      else if (dispData.getMin() < 20) x_pos = 36;
+      else x_pos = 33;
       rgb_matrix::DrawText(canvas, font_std, x_pos, 32, *pTimeColor, &bg_color, sTime, letter_spacing);
 
-      if(dispData.getScoreB() < 10){
+      // Display right score (B)
+      if (dispData.getScoreB() < 10){
         sprintf(sScoreB, "%d", dispData.getScoreB());
-        rgb_matrix::DrawText(canvas, font_std, 139, 32, *dispData.getColorB(), &bg_color, sScoreB, letter_spacing);
+        pFont = font_std;
+        x_pos = 139;
       } else {
         sprintf(sScoreB, "%2d", dispData.getScoreB());
-        if(dispData.getScoreB() < 20)
-          rgb_matrix::DrawText(canvas, font_narr, 128+5, 32, *dispData.getColorB(), &bg_color, sScoreB, letter_spacing);
-        else
-          rgb_matrix::DrawText(canvas, font_narr, 128, 32, *dispData.getColorB(), &bg_color, sScoreB, letter_spacing);
+        pFont = font_narrow;
+        if (dispData.getScoreB() < 20) x_pos = 128+5;
+        else x_pos = 128;
       }
+      rgb_matrix::DrawText(canvvas, *pFont, x_pos, 32, *dispData.getColorB(), &bg_color, sScoreB, letter_spacing);
+
 
       #ifdef CURRENT_TEST
       canvas->Clear();
