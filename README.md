@@ -36,3 +36,27 @@ The Software is based on the great library https://github.com/hzeller/rpi-rgb-le
 
 
 For more information see the [wiki page](../../wiki).
+
+
+## Building
+
+1. Set up the Raspberry Pi  
+Pay attention to these notes: https://github.com/hzeller/rpi-rgb-led-matrix#Troubleshooting  
+Note: The config file has moved in Debian Bookworm to `/boot/firmware/config.txt`  
+If this does not work you can blacklist the kernel module for the sound chip:  
+`echo "blacklist snd_bcm2835" | sudo tee /etc/modprobe.d/blacklist-snd_bcm2835.conf`
+
+2. Install required packages  
+`sudo apt install -y git libncurses5-dev`
+
+3. Clone repository  
+`git clone https://github.com/hansu/rpi-canoepolo-scoreboard.git`
+
+4. Build it  
+`cd rpi-canoepolo-scoreboard`  
+`make -C scoreboard -j`  
+Note: the included libws libray is for 32 bit only. Use the branch "64-bit" if you use a 64 bit OS.
+
+5. Run it  
+`cd rpi-canoepolo-scoreboard/scoreboard`  
+`sudo ./scoreboard`
